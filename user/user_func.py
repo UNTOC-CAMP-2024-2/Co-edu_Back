@@ -10,6 +10,8 @@ def get_user(user_id: str, db: Session):
 def get_user_nickname(nickname: str, db: Session):
     return db.query(User).filter(User.nickname == nickname).first()
 
-#패스워드 암호화
+#패스워드 생성 및 확인
 def get_password_hash(password):
     return pwd_context.hash(password)
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
