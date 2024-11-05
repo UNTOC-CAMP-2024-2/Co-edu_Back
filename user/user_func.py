@@ -1,7 +1,13 @@
 from sqlalchemy.orm import Session
-from user_model import User
+from user.user_model import User
 from passlib.context import CryptContext
-from fastapi import APIRouter, HTTPException, Depends,Security
+from fastapi import HTTPException
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+EMAIL = os.environ.get("EMAILADDRESS")
+from email.mime.text import MIMEText
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -18,8 +24,17 @@ def get_duplicate(user, db: Session):
         raise HTTPException(status_code=409, detail="해당 닉네임은 이미 존재합니다")
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=409, detail="해당 이메일은 이미 존재합니다")
+    
 #패스워드 생성 및 확인
 def get_password_hash(password):
     return pwd_context.hash(password)
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+#이메일전송
+def email_send(email,code):
+    from main import smtp
+    msg = MIMEText(f'이메일 인증코드입니다 : {code}')
+    msg['Subject'] = '[Coedu] 이메일 인증번호'
+
+    smtp.sendmail(EMAIL, email, msg.as_string())
