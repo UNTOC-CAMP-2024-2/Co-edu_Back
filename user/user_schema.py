@@ -7,6 +7,7 @@ class NewUserForm(BaseModel):
     name : str
     nickname : str
     email : EmailStr
+    is_mentor : bool
 
     @field_validator('email','user_id','password','name','nickname')
     def check_empty(cls, v):
@@ -24,3 +25,12 @@ class NewUserForm(BaseModel):
     def validate_nickname(cls,v):
         if len(v) < 3:
             raise HTTPException(status_code=422, detail="닉네임은 최소 3글자 이상으로 입력해주세요.")
+        return v
+    
+class LoginForm(BaseModel):
+    user_id : str
+    password : str
+class EmailVerification(BaseModel):
+    user_id : str
+    email : str
+    code : str
