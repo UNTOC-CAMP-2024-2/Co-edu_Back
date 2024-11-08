@@ -2,11 +2,9 @@ from sqlalchemy.orm import Session
 from user.user_model import User
 from passlib.context import CryptContext
 from fastapi import HTTPException
-import os
-from dotenv import load_dotenv
+from variable import *
 
-load_dotenv()
-EMAIL = os.environ.get("EMAILADDRESS")
+
 from email.mime.text import MIMEText
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

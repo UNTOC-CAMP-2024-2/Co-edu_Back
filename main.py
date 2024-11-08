@@ -4,13 +4,9 @@ from user.user_router import router as user_router
 from user.user_db import user_Base,user_engine
 import smtplib
 from email.mime.text import MIMEText
-import os
-from dotenv import load_dotenv
+from variable import *
 
-load_dotenv()
 
-EMAIL = os.environ.get("EMAILADDRESS")
-EMAIL_PASSWORD = os.environ.get("EMAILPASSWORD")
 smtp = smtplib.SMTP('smtp.gmail.com', 587)
 
 smtp.ehlo()
