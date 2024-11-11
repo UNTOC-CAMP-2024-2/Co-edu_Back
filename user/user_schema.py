@@ -34,3 +34,9 @@ class EmailVerification(BaseModel):
     user_id : str
     email : str
     code : str
+    
+class GetToken(BaseModel):
+    user_id : str
+
+class VerifyToken(BaseModel):
+    token : str
