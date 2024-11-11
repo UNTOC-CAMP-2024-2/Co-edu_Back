@@ -5,8 +5,35 @@ from fastapi import HTTPException
 from variable import *
 
 
+import jwt
+from datetime import datetime, timedelta
+from typing import Optional
+
+load_dotenv()
+
+EMAIL = os.environ.get("EMAILADDRESS")
+SECRET_KEY = os.environ.get("SECRET_KEY")
+# token algorithm
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 from email.mime.text import MIMEText
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+#토큰 생성 및 암호화/복호화
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def token_decode(token):
+    decode_token = jwt.decode(jwt=token, key=SECRET_KEY,algorithms=ALGORITHM)
+    return decode_token["sub"]
 
 
 #사용자 정보 여부 확인
