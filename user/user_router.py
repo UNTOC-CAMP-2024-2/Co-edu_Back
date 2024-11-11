@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends,Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, HTTPException, Depends,Security, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from user.user_db import get_userdb
 from user.user_model import User,VerifiedEmail
@@ -54,3 +54,15 @@ async def verificate_email(data: EmailVerification, user_db : Session = Depends(
     user_db.commit()
     return {"여부" : "인증이 완료되었습니다."}
     
+@router.post("/token")
+async def login(data: GetToken):
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": data.user_id}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/getuser")
+async def get_user_by_token(data: VerifyToken):
+    username = token_decode(data.token)
+    return {"username" : username}

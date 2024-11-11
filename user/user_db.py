@@ -10,7 +10,7 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_PORT = os.environ.get("DB_PORT", 3306)
 USER_DB_NAME = os.environ.get("USER_DB_NAME")
 
-SQLALCHEMY_DATABASE_URL_USER = f"mysql+mysqlconnector://root:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{USER_DB_NAME}"
+SQLALCHEMY_DATABASE_URL_USER = f"mysql+mysqlconnector://root:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{USER_DB_NAME}?charset=utf8mb4&collation=utf8mb4_unicode_ci"
 
 user_engine = create_engine(SQLALCHEMY_DATABASE_URL_USER)
 
