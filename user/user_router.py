@@ -37,6 +37,9 @@ async def login_user(user: LoginForm, user_db : Session = Depends(get_userdb)):
 
 @router.post("/email/send")
 async def send_email_verification(data: EmailVerification, user_db : Session = Depends(get_userdb)):
+    user = get_user_email(data.email,user_db)
+    if user:
+        raise HTTPException(status_code=409, detail="이미 가입된 이메일주소입니다.")
     new_code = str(random.randint(10000,99999))
     db_email = VerifiedEmail(user_id = data.user_id, email = data.email, code = new_code,created_at = datetime.datetime.now())
     user_db.add(db_email)
