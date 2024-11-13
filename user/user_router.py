@@ -27,13 +27,28 @@ async def signin_user(user: NewUserForm, user_db : Session = Depends(get_userdb)
 
     return db_user
 
+#로그인, 토큰발급
 @router.post("/login")
 async def login_user(user: LoginForm, user_db : Session = Depends(get_userdb)):
     db_user = get_user(user.user_id, user_db)
     if db_user is None or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="로그인 정보 불일치.")
-    
-    return {"로그인여부" : "성공"}
+    else:
+        access_token = create_access_token(data={"sub": user.user_id})
+        refresh_token = create_refresh_token(data={"sub": user.user_id})
+    return {"로그인여부" : "성공" , "access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+#토큰 verify
+@router.post("/token/verify")
+async def verify_token(data: Token):
+    username = token_decode(data.token)
+    return {"user" : username}
+
+#토큰 만료시 : refresh_token
+@router.post("/token/refresh")
+async def ref_token(data: TokenRefresh):
+    new_access_token = refresh_token(data.reftoken)
+    return {"access_token": new_access_token, "token_type": "bearer"}
 
 @router.post("/email/send")
 async def send_email_verification(data: EmailVerification, user_db : Session = Depends(get_userdb)):
@@ -56,16 +71,3 @@ async def verificate_email(data: EmailVerification, user_db : Session = Depends(
     user_db.delete(user)
     user_db.commit()
     return {"여부" : "인증이 완료되었습니다."}
-    
-@router.post("/token")
-async def login(data: GetToken):
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": data.user_id}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
-
-@router.post("/getuser")
-async def get_user_by_token(data: VerifyToken):
-    username = token_decode(data.token)
-    return {"username" : username}

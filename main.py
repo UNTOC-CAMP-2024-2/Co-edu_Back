@@ -28,7 +28,6 @@ app.include_router(user_router, tags=["user"])
 app.include_router(cs_router, tags=["classroom"])
 app.include_router(assign_router, tags=["assignment"])
 
-
 @app.get("/")
 async def init():
     return {"init"}
