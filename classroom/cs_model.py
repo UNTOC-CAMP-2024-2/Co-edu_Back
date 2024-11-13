@@ -6,6 +6,7 @@ class Classroom(cs_Base):
     __tablename__ = "Classroom"
     id = Column(Integer, primary_key=True, index=True)
     class_name = Column(String(255), nullable=False, index=True)
+    description = Column(String(300))
     max_member = Column(Integer)
 
 class UserToClass(cs_Base):   
