@@ -30,12 +30,11 @@ async def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCred
     token = credentials.credentials
     user = token_decode(token)
     check_mentor(user, user_db)
-    new_code = str(random.randint(10000,99999))
-    while new_code != None:
+    new_code = None
+    while new_code == None:
         new_code = str(random.randint(10000,99999))
         new_code = check_code(new_code,cs_db)
-
-    cs_data = Classroom(class_name = data.class_name, code = new_code, description = data.description,
+    cs_data = Classroom(class_name = data.class_name, class_code = new_code, description = data.description,
                      max_member = data.max_mameber,created_by = user)
     usercs_data = UserToClass(user_id = user, class_code = new_code)
     
