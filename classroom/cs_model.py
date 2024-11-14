@@ -6,11 +6,8 @@ class Classroom(cs_Base):
     __tablename__ = "Classroom"
     id = Column(Integer, primary_key=True, index=True)
     class_name = Column(String(255), nullable=False, index=True)
-<<<<<<< Updated upstream
-=======
     class_code = Column(String(10),index=True, unique=True)
     description = Column(String(300))
->>>>>>> Stashed changes
     max_member = Column(Integer)
     created_by = Column(String(30),nullable = False, index=True)
 

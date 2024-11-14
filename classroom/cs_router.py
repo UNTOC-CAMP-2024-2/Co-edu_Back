@@ -1,14 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends,Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-<<<<<<< Updated upstream
 from user.user_db import get_userdb
 from user.user_model import User,VerifiedEmail
 from user.user_func import *
 from user.user_schema import *
 import random
 import datetime
-=======
 
 from classroom.cs_model import Classroom,UserToClass
 from classroom.cs_schema import NewClassroom
@@ -19,16 +17,12 @@ from user.user_func import *
 from user.user_db import get_userdb
 
 import random
->>>>>>> Stashed changes
 
 security = HTTPBearer()
 
 
 router = APIRouter(
     prefix="/classroom",
-<<<<<<< Updated upstream
-)
-=======
 )
 
 @router.post("/create")
@@ -51,4 +45,9 @@ async def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCred
     cs_db.refresh(cs_data)
     cs_db.refresh(usercs_data)
     return {"class_name" : data.class_name, "code": new_code, "created_by" : user}
->>>>>>> Stashed changes
+  
+@router.post("/create")
+async def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCredentials = Security(security)):
+    token = credentials.credentials
+    user_id = token_decode(token)
+    check_mentor(user_id)
