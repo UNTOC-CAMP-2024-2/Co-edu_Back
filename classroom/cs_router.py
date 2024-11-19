@@ -79,8 +79,17 @@ def join_classroom(data : ClassroomCode, credentials: HTTPAuthorizationCredentia
 def leave_classroom(data : ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
+    usertoclass = cs_db.query(UserToClass).filter(UserToClass.user_id == user and UserToClass.class_code == data.class_code).first()
+    if usertoclass:
+        cs_db.delete(usertoclass)
+        classroom_data = cs_db.query(Classroom).filter(Classroom.class_code == data.class_code).first()
+        classroom_data.current_member -= 1
+        cs_db.commit()
+        return "정상적으로 해당 클래스룸에서 퇴장하셨습니다."
+    else:
+        raise HTTPException(status_code=404, detail="해당 클래스룸을 찾을 수 없거나 해당 클래스룸에서 유저를 찾을 수 없습니다.")
+        
     
-    
-    
+
 
     
