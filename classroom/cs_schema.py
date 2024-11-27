@@ -18,4 +18,3 @@ class NewClassroom(ClassroomInfo):
 class ClassroomCode(BaseModel):
     class_code : str
 
-
