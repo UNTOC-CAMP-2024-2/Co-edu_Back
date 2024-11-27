@@ -13,7 +13,7 @@ def check_mentor(user_id, db: Session):
     if data.is_mentor == True:
         return
     else:
-        raise HTTPException(status_code=400, detail="멘토가 아니므로 권한이 없습니다.")
+        raise HTTPException(status_code=400, detail="멘토가 아니므로 스터디방을 생성하거나 삭제할 수 없습니다.")
     
 #해당 클래스룸에 존재하는 유저인지 판별
 def check_member(user_id,class_code, db: Session):
