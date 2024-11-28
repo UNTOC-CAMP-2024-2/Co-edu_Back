@@ -18,3 +18,12 @@ class NewClassroom(ClassroomInfo):
 class ClassroomCode(BaseModel):
     class_code : str
 
+
+class PendingApprovalInfo(BaseModel):
+    user_id: str
+    class_code: str
+    requested_at: str
+
+class ApprovalRequest(BaseModel):
+    user_id: str
+    class_code: str
