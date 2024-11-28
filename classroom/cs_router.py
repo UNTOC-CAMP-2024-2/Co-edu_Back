@@ -5,14 +5,14 @@ from user.user_db import get_userdb
 from user.user_func import *
 from user.user_schema import *
 
-from classroom.cs_model import Classroom,UserToClass
+from classroom.cs_model import *
 from classroom.cs_schema import *
 from classroom.cs_func import *
 from classroom.cs_db import get_csdb
 
 from user.user_func import *
 from user.user_db import get_userdb
-
+from sqlalchemy import and_
 from typing import List
 security = HTTPBearer()
 
@@ -59,30 +59,63 @@ def delete_classroom(data: ClassroomCode,credentials: HTTPAuthorizationCredentia
         raise HTTPException(status_code=400, detail="해당 클래스룸을 생성한 멘토가 아닙니다.")
     
 @router.put("/join")
-def join_classroom(data : ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb)):
+def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_member(user,data.class_code,cs_db)
-    usercs_data = UserToClass(user_id = user, class_code = data.class_code)
     classroom_data = cs_db.query(Classroom).filter(Classroom.class_code == data.class_code).first()
-    if classroom_data.max_member != classroom_data.current_member:
+    
+    if not classroom_data:
+        raise HTTPException(status_code=404, detail="존재하지 않는 클래스룸입니다.")
+    
+    # 무료 여부 확인
+    if not classroom_data.is_free:
+        # 이미 승인 대기 중인지 확인
+        pending = cs_db.query(PendingApproval).filter(
+            PendingApproval.user_id == user,
+            PendingApproval.class_code == data.class_code
+        ).first()
+        
+        if pending:
+            raise HTTPException(status_code=400, detail="이미 승인 대기 중입니다.")
+        
+        # 승인 대기로 추가
+        new_pending = PendingApproval(
+            user_id=user,
+            class_code=data.class_code,
+            requested_at="test"
+        )
+        cs_db.add(new_pending)
+        cs_db.commit()
+        return "승인 대기 중입니다. 스터디장의 승인을 기다려주세요."
+    
+    # 무료라면 바로 가입
+    check_member(user, data.class_code, cs_db)
+    usercs_data = UserToClass(user_id=user, class_code=data.class_code)
+    if classroom_data.max_member > classroom_data.current_member:
         classroom_data.current_member += 1
         cs_db.add(usercs_data)
         cs_db.commit()
         cs_db.refresh(classroom_data)
         return "정상적으로 해당 클래스룸에 입장하셨습니다."
     else:
-        raise HTTPException(status_code=400,detail="이미 인원이 가득찬 클래스룸입니다.")
+        raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
 
 @router.delete("/leave")
-def leave_classroom(data : ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb)):
+def leave_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    usertoclass = cs_db.query(UserToClass).filter(UserToClass.user_id == user and UserToClass.class_code == data.class_code).first()
+    
+    # 수정: and_()를 사용하여 조건 정확히 필터링
+    usertoclass = cs_db.query(UserToClass).filter(
+        and_(UserToClass.user_id == user, UserToClass.class_code == data.class_code)
+    ).first()
+    
     if usertoclass:
-        cs_db.delete(usertoclass)
+        cs_db.delete(usertoclass)  # UserToClass 삭제
         classroom_data = cs_db.query(Classroom).filter(Classroom.class_code == data.class_code).first()
-        classroom_data.current_member -= 1
+        
+        if classroom_data:
+            classroom_data.current_member -= 1  # current_member 감소
         cs_db.commit()
         return "정상적으로 해당 클래스룸에서 퇴장하셨습니다."
     else:
@@ -108,3 +141,54 @@ def search_classroom(search: str = None, cs_db: Session = Depends(get_csdb)):
     
     db_classrooms = query.all()
     return map_classrooms(db_classrooms)  
+
+
+@router.get("/pending_approvals/{class_code}", response_model=List[PendingApprovalInfo])
+def get_pending_approvals(class_code: str, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    
+    # 해당 유저가 요청한 class_code의 스터디장인지 확인
+    classroom_data = cs_db.query(Classroom).filter(
+        Classroom.class_code == class_code,
+        Classroom.created_by == user
+    ).first()
+    
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아니거나 존재하지 않습니다.")
+    
+    # 해당 클래스룸의 승인 대기 목록 조회
+    pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
+    return [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]
+
+@router.post("/approve")
+def approve_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    
+    # 해당 유저가 스터디장인지 확인
+    classroom_data = cs_db.query(Classroom).filter(
+        Classroom.class_code == data.class_code,
+        Classroom.created_by == user
+    ).first()
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
+    
+    pending = cs_db.query(PendingApproval).filter(
+        PendingApproval.user_id == data.user_id,
+        PendingApproval.class_code == data.class_code
+    ).first()
+    
+    if not pending:
+        raise HTTPException(status_code=404, detail="승인 대기 중인 사용자를 찾을 수 없습니다.")
+    
+    if classroom_data.max_member > classroom_data.current_member:
+        # 승인 처리
+        new_member = UserToClass(user_id=data.user_id, class_code=data.class_code)
+        classroom_data.current_member += 1
+        cs_db.add(new_member)
+        cs_db.delete(pending)
+        cs_db.commit()
+        return "승인이 완료되었습니다."
+    else:
+        raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
