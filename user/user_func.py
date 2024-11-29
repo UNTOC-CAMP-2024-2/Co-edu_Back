@@ -59,16 +59,12 @@ def refresh_token(token):
 #사용자 정보 여부 확인
 def get_user(user_id: str, db: Session):
     return db.query(User).filter(User.user_id == user_id).first()
-def get_user_nickname(nickname: str, db: Session):
-    return db.query(User).filter(User.nickname == nickname).first()
 def get_user_email(email: str, db: Session):
     return db.query(User).filter(User.email == email).first()
 
 def get_duplicate(user, db: Session):
     if db.query(User).filter(User.user_id == user.user_id).first():
         raise HTTPException(status_code=409, detail="해당 아이디는 이미 존재합니다")
-    if get_user_nickname(user.nickname, db):
-        raise HTTPException(status_code=409, detail="해당 닉네임은 이미 존재합니다")
     if db.query(User).filter(User.email == user.email).first():
         raise HTTPException(status_code=409, detail="해당 이메일은 이미 존재합니다")
     
