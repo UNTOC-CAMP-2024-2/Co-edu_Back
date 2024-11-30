@@ -7,19 +7,9 @@ from classroom.cs_router import router as cs_router
 from classroom.cs_db import cs_Base,cs_engine
 
 # from assignment.assign_router import router as assign_router
-import smtplib
-from email.mime.text import MIMEText
 from variable import *
 
 
-smtp = smtplib.SMTP('smtp.gmail.com', 587)
-
-smtp.ehlo()
-
-smtp.starttls()
-
-#로그인을 통해 지메일 접속
-smtp.login(EMAIL, EMAIL_PASSWORD)
 
 app = FastAPI()
 user_Base.metadata.create_all(bind=user_engine)

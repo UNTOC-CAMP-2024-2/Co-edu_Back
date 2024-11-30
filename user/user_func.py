@@ -76,7 +76,8 @@ def verify_password(plain_password, hashed_password):
 
 #이메일전송
 def email_send(email, code):
-    from main import smtp
+    import smtplib
+    from email.mime.text import MIMEText
 
     html_content = f"""
     <html>
@@ -105,9 +106,17 @@ def email_send(email, code):
     </html>
     """
 
-    # MIMEText 객체를 HTML 형식으로 생성
     msg = MIMEText(html_content, "html")
     msg['Subject'] = '[Coedu] 이메일 인증번호'
 
-    # 이메일 전송
-    smtp.sendmail(EMAIL, email, msg.as_string())
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+            smtp.ehlo() 
+            smtp.starttls() 
+            smtp.login(EMAIL, EMAIL_PASSWORD)  
+
+            # 이메일 전송
+            smtp.sendmail(EMAIL, email, msg.as_string())
+
+    except Exception as e:
+        print(f"이메일 전송 중 오류가 발생했습니다: {e}")
