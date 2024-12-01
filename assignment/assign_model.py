@@ -26,7 +26,7 @@ class Assignment(as_Base):
     __tablename__ = "Assignment"
     id = Column(Integer, primary_key=True, index=True)
     assignment_id = Column(String(10),unique=True,nullable=False,index=True)
-    class_id = Column(Integer,unique=True,nullable=False,index=True)
+    class_id = Column(String(10),unique=True,nullable=False,index=True)
     title = Column(String(255), nullable=False, index=True)
     description = Column(TEXT, nullable=False, index=True)
     deadline = Column(DateTime)
@@ -43,15 +43,16 @@ class AssignmentTestcase(as_Base):
 
 
 #멘티용
-class AssignmentStatus(as_Base): 
-    __tablename__ = "AssignmnetStatus"
-    id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(String(10),nullable=False,index=True)
-    user_id = Column(String(20), nullable=False, index=True)
-    status = Column(Boolean, index=True)
+# class AssignmentStatus(as_Base): 
+#     __tablename__ = "AssignmnetStatus"
+#     id = Column(Integer, primary_key=True, index=True)
+#     assignment_id = Column(String(10),nullable=False,index=True)
+#     user_id = Column(String(20), nullable=False, index=True)
+#     status = Column(Boolean, index=True)
 
 class AssignmentFeedBack(as_Base):
     __tablename__ = "AssignmentFeedBack"
     id = Column(Integer, primary_key=True, index=True)
     assignment_id = Column(String(10),nullable=False,index=True)
     user_id = Column(String(20), nullable=False, index=True)
+    feedback = Column(TEXT)
