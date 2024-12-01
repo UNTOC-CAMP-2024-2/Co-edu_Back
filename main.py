@@ -6,6 +6,9 @@ from user.user_db import user_Base,user_engine
 from classroom.cs_router import router as cs_router
 from classroom.cs_db import cs_Base,cs_engine
 
+from assignment.assign_router import router as as_router
+from assignment.assign_db import as_Base,as_engine
+
 # from assignment.assign_router import router as assign_router
 from variable import *
 
@@ -14,9 +17,11 @@ from variable import *
 app = FastAPI()
 user_Base.metadata.create_all(bind=user_engine)
 cs_Base.metadata.create_all(bind=cs_engine)
+as_Base.metadata.create_all(bind=as_engine)
 app.include_router(user_router, tags=["user"])
 app.include_router(cs_router, tags=["classroom"])
-# app.include_router(assign_router, tags=["assignment"])
+app.include_router(as_router, tags=["assignment"])
+
 
 @app.get("/")
 async def init():

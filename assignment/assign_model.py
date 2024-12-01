@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Integer, String,Boolean,DateTime
+from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT
 from assignment.assign_db import as_Base
-from typing import List
-from assign_schema import *
+from assignment.assign_schema import *
 
 """""
 멘티 페이지에서의 Assignment컴포넌트의 type
@@ -17,33 +16,42 @@ from assign_schema import *
 class AssignmentSubmission(as_Base):
     __tablename__ = "AssignmentSubmission"
     id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer,unique=True,nullable=False,index=True)
+    assignment_id = Column(String(10),nullable=False,index=True)
     user_id = Column(String(20), nullable=False, index=True)
     submitted_at = Column(DateTime) 
     code = Column(String(15), nullable=False)
     correct = Column(Boolean)
 
-
-
 class Assignment(as_Base):
     __tablename__ = "Assignment"
     id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer,unique=True,nullable=False,index=True)
+    assignment_id = Column(String(10),unique=True,nullable=False,index=True)
     class_id = Column(Integer,unique=True,nullable=False,index=True)
     title = Column(String(255), nullable=False, index=True)
-    description = Column(String(1024), nullable=False, index=True)
+    description = Column(TEXT, nullable=False, index=True)
     deadline = Column(DateTime)
     created_at = Column(DateTime)
-    testcase = Column(List[Item])
     created_by = Column(String(20),nullable=False, index=True)
 
+class AssignmentTestcase(as_Base):
+    __tablename__ = "Testcase"
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(String(10),nullable=False,index=True)
+    case_number = Column(Integer,nullable=False)
+    input = Column(TEXT)
+    expected_output = Column(TEXT)
+
+
 #멘티용
-class AssignmentStatus(as_Base):
+class AssignmentStatus(as_Base): 
     __tablename__ = "AssignmnetStatus"
     id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(Integer,unique=True,nullable=False,index=True)
-    class_id = Column(Integer,unique=True,nullable=False,index=True)
+    assignment_id = Column(String(10),nullable=False,index=True)
     user_id = Column(String(20), nullable=False, index=True)
-    feedback = Column(String(1024), nullable=False, index=True)
     status = Column(Boolean, index=True)
 
+class AssignmentFeedBack(as_Base):
+    __tablename__ = "AssignmentFeedBack"
+    id = Column(Integer, primary_key=True, index=True)
+    assignment_id = Column(String(10),nullable=False,index=True)
+    user_id = Column(String(20), nullable=False, index=True)
