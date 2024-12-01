@@ -11,7 +11,7 @@ def check_id(id, db: Session):
         return id
     
 
-def add_testcase(db: Session, assignment_id: int, input_data: str, expected_output: str):
+def add_testcase(db: Session, assignment_id: str, input_data: str, expected_output: str):
     # Get the current highest case_number for the given assignment_id
     max_case_number = (db.query(AssignmentTestcase.case_number)
                         .filter(AssignmentTestcase.assignment_id == assignment_id)
@@ -28,7 +28,7 @@ def add_testcase(db: Session, assignment_id: int, input_data: str, expected_outp
     db.add(new_testcase)
     db.commit()
     db.refresh(new_testcase)
-    return new_testcase
+    return new_case_number
 
 def delete_testcase(db: Session, assignment_id: int, case_number: int):
     # Delete the specified testcase
@@ -48,15 +48,18 @@ def delete_testcase(db: Session, assignment_id: int, case_number: int):
     db.commit()
 
 
-def delete_assignment(db : Session, assignment):
-    testcases = db.query(AssignmentTestcase).filter(AssignmentTestcase.assignment_id == assignment.assignment_id).all()
-    db.delete(testcases)
-    db.commit()
-    db.refresh(testcases)
-    feedbacks = db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id).all()
-    db.delete(feedbacks)
-    db.commit()
-    db.refresh(feedbacks)
+def delete_assignment(db: Session, assignment):
+
+    db.query(AssignmentTestcase).filter(
+        AssignmentTestcase.assignment_id == assignment.assignment_id
+    ).delete(synchronize_session=False)
+
+    db.query(AssignmentFeedBack).filter(
+        AssignmentFeedBack.assignment_id == assignment.assignment_id
+    ).delete(synchronize_session=False)
+    
+    db.query(AssignmentSubmission).filter(
+        AssignmentSubmission.assignment_id == assignment.assignment_id
+    ).delete(synchronize_session=False)
     db.delete(assignment)
     db.commit()
-    db.refresh(assignment)

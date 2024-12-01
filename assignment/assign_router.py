@@ -34,7 +34,7 @@ def create_assign(data : AssignmentCreate
 
     new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
                            ,title = data.title, description = data.description
-                           ,created_at = datetime.utcnow, deadline = data.deadline
+                           ,created_at = datetime.utcnow(), deadline = data.deadline
                            ,created_by = user)
     as_db.add(new_assign)
     as_db.commit()
@@ -69,7 +69,7 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
                     .filter(AssignmentTestcase.assignment_id == assignment_id)
                     .order_by(AssignmentTestcase.case_number.asc())
                     .all())
-        return {"assignment_id" : assignment_id, "class_id" : assignment.assignment_id
+        return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
                 ,"deadline" : assignment.description,"created_at" : assignment.created_at
                 ,"created_by" : assignment.created_by,"testcases" : testcases}
@@ -84,22 +84,22 @@ def mentor_status(assignment_id : str
     token = credentials.credentials
     user = token_decode(token)
     check_mentor(user, user_db)
+    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
-        assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
         class_id = assignment.class_id
         classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
-        classroom_users = classroom.currunt_member
+        classroom_users = classroom.current_member
         submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id).all()
-        if submissions == None :
+        if submissions == [] :
             assignment_status = "undone"
         elif len(submissions) == classroom_users :
             assignment_status = "done"
         else :
             assignment_status = "halfdone"
         feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment_id).all()
-        if feedbacks == None :
+        if feedbacks == [] :
             feedback_status = "notGaveFeedbackAll"
         elif len(feedbacks) == classroom_users :
             feedback_status = "gaveFeedbackAll"
@@ -145,10 +145,10 @@ def testcase(data : TestCase,credentials: HTTPAuthorizationCredentials = Securit
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
         if user == assignment.created_by :
-            add_testcase(db = as_db,assignment_id=TestCase.assignment_id,
-                         input_data=TestCase.input_data,
-                         expected_output=TestCase.expected_output)
-            return "테스트케이스를 성공적으로 추가했습니다."
+            case_number = add_testcase(db = as_db,assignment_id=data.assignment_id,
+                         input_data=data.input_data,
+                         expected_output=data.expected_output)
+            return {"status" : "테스트케이스를 성공적으로 추가했습니다.", "case_number" : case_number}
         else :
             return HTTPException(status_code=400, detail="과제를 생성한 유저가 아닙니다.")
         
@@ -164,8 +164,8 @@ def testcasedelete(data : DeleteTestCase,credentials: HTTPAuthorizationCredentia
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
         if user == assignment.created_by :
-            delete_testcase(db = as_db,assignment_id=DeleteTestCase.assignment_id,
-                         case_number=DeleteTestCase.case_number)
+            delete_testcase(db = as_db,assignment_id=data.assignment_id,
+                         case_number=data.case_number)
             return "테스트케이스를 성공적으로 삭제했습니다."
         else :
             return HTTPException(status_code=400, detail="과제를 생성한 유저가 아닙니다.")
@@ -186,9 +186,9 @@ def submit(data : Submit
     if submission:
         as_db.delete(submission)
         as_db.commit()
-        as_db.refresh(submission)
+        as_db.refresh(submission) #제출에 코드 넣으니까 json 파싱을 못함
     new_submission = AssignmentSubmission(assignment_id = data.assignment_id,user_id = user
-                                      , submitted_at = datetime.utcnow,code = data.code
+                                      , submitted_at = datetime.utcnow(),code = data.code
                                       , correct = True)
     as_db.add(new_submission)
     as_db.commit()
@@ -213,7 +213,8 @@ def feedback(data : Feedback
                           AssignmentFeedBack.user_id == data.mentee_id).first()
         if feedback == None :        
             new_feedback = AssignmentFeedBack(assignment_id = data.assignment_id,
-                                              user_id = data.mentee_id)
+                                              user_id = data.mentee_id
+                                              ,feedback = data.feedback)
             as_db.add(new_feedback)
             as_db.commit()
             as_db.refresh(new_feedback)
