@@ -24,22 +24,28 @@ router = APIRouter(
 def create_assign(data : AssignmentCreate
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb)
-                  ,user_db : Session=Depends(get_userdb)):
+                  ,user_db : Session=Depends(get_userdb)
+                  ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    new_id = None
-    while new_id == None:
-        new_id = str(random.randint(10000,99999))
-        new_id = check_id(new_id,as_db)
+    check_mentor(db=user_db,user_id=user)
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == data.class_id)
+    if classroom.created_by != user :
+        return HTTPException(status_code=400, detail="클래스룸을 생성한 유저가 아닙니다.")
+    else :
+        new_id = None
+        while new_id == None:
+            new_id = str(random.randint(10000,99999))
+            new_id = check_id(new_id,as_db)
 
-    new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
-                           ,title = data.title, description = data.description
-                           ,created_at = datetime.utcnow(), deadline = data.deadline
-                           ,created_by = user)
-    as_db.add(new_assign)
-    as_db.commit()
-    as_db.refresh(new_assign)
-    return {"status" : "과제가 정상적으로 생성되었습니다.","assignment_id": new_id}
+        new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
+                            ,title = data.title, description = data.description
+                            ,created_at = datetime.utcnow(), deadline = data.deadline
+                            ,created_by = user)
+        as_db.add(new_assign)
+        as_db.commit()
+        as_db.refresh(new_assign)
+        return {"status" : "과제가 정상적으로 생성되었습니다.","assignment_id": new_id}
 
 @router.delete("/delete") #assignment delete --> 완료
 def delete_assign(data : DeleteAssign
