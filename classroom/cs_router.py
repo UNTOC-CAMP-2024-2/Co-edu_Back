@@ -21,7 +21,7 @@ router = APIRouter(
     prefix="/classroom",
 )
 
-@router.post("/create")
+@router.post("/create", summary="클래스룸 생성")
 def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb), user_db : Session=Depends(get_userdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -40,7 +40,7 @@ def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCredential
     cs_db.refresh(usercs_data)
     return {"class_name" : data.class_name, "code": new_code, "created_by" : user}
   
-@router.delete("/delete")
+@router.delete("/delete", summary="클래스룸 삭제")
 def delete_classroom(data: ClassroomCode,credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb), user_db : Session=Depends(get_userdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -58,7 +58,7 @@ def delete_classroom(data: ClassroomCode,credentials: HTTPAuthorizationCredentia
     else:
         raise HTTPException(status_code=400, detail="해당 클래스룸을 생성한 멘토가 아닙니다.")
     
-@router.put("/join")
+@router.put("/join", summary="클래스룸 입장")
 def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -100,7 +100,7 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
 
-@router.delete("/leave")
+@router.delete("/leave" , summary="클래스룸 퇴장")
 def leave_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -122,7 +122,7 @@ def leave_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentia
         raise HTTPException(status_code=404, detail="해당 클래스룸을 찾을 수 없거나 해당 클래스룸에서 유저를 찾을 수 없습니다.")
         
     
-@router.get("/myclassroom", response_model=List[ClassroomInfo])
+@router.get("/myclassroom", response_model=List[ClassroomInfo], summary="내가 속한 클래스룸 확인하기")
 def show_myclassroom(credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -132,7 +132,7 @@ def show_myclassroom(credentials: HTTPAuthorizationCredentials = Security(securi
     
     return map_classrooms(db_classrooms)  
 
-@router.get("/search_classroom", response_model=List[ClassroomInfo])
+@router.get("/search_classroom", response_model=List[ClassroomInfo], summary="공개 클래스룸 검색하기")
 def search_classroom(search: str = None, cs_db: Session = Depends(get_csdb)):
     query = cs_db.query(Classroom).filter(Classroom.is_access == True)
     
@@ -143,7 +143,7 @@ def search_classroom(search: str = None, cs_db: Session = Depends(get_csdb)):
     return map_classrooms(db_classrooms)  
 
 
-@router.get("/pending_approvals/{class_code}", response_model=List[PendingApprovalInfo])
+@router.get("/pending_approvals/{class_code}", response_model=List[PendingApprovalInfo], summary="클래스룸 입장대기멤버 확인하기")
 def get_pending_approvals(class_code: str, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -161,7 +161,7 @@ def get_pending_approvals(class_code: str, credentials: HTTPAuthorizationCredent
     pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
     return [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]
 
-@router.post("/approve")
+@router.post("/approve" , summary="입장대기중인 멤버 승인하기")
 def approve_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
@@ -192,3 +192,4 @@ def approve_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredenti
         return "승인이 완료되었습니다."
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
+    
