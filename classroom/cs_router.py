@@ -25,7 +25,6 @@ router = APIRouter(
 def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb), user_db : Session=Depends(get_userdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(user, user_db)
     new_code = create_code(cs_db)
     cs_data = Classroom(class_name = data.class_name, class_code = new_code, description = data.description,
                      max_member = data.max_member,day = data.day, start_time = data.start_time, 
@@ -44,7 +43,6 @@ def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCredential
 def delete_classroom(data: ClassroomCode,credentials: HTTPAuthorizationCredentials = Security(security),cs_db : Session=Depends(get_csdb), user_db : Session=Depends(get_userdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(user, user_db)
     classroom_data = cs_db.query(Classroom).filter(Classroom.class_code == data.class_code).first()
     userclass_data = cs_db.query(UserToClass).filter(UserToClass.class_code == data.class_code).all()
     if classroom_data is None:
@@ -100,6 +98,7 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
 
+#해당클래스룸 만든이 일때 안된다는거 작업해야함
 @router.delete("/leave" , summary="클래스룸 퇴장")
 def leave_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials

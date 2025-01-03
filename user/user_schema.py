@@ -5,7 +5,6 @@ class NewUserForm(BaseModel):
     password : str
     name : str
     email : EmailStr
-    is_mentor : bool
     
 class LoginForm(BaseModel):
     user_id : str

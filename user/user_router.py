@@ -20,7 +20,7 @@ async def signin_user(user: NewUserForm, user_db : Session = Depends(get_userdb)
     get_duplicate(user, user_db)
     hashed_password = get_password_hash(user.password)
     db_user = User(user_id=user.user_id, password=hashed_password, name=user.name,\
-                     email = user.email, is_mentor = user.is_mentor)
+                     email = user.email)
     user_db.add(db_user)
     user_db.commit()
     user_db.refresh(db_user)
