@@ -29,3 +29,8 @@ class Feedback(BaseModel):
     assignment_id : str
     mentee_id : str
     feedback : str
+
+class Test(BaseModel):
+    assignment_id : str
+    code : str
+    language : str

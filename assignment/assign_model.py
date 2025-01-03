@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT
+from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON
 from assignment.assign_db import as_Base
 from assignment.assign_schema import *
 
@@ -21,6 +21,7 @@ class AssignmentSubmission(as_Base):
     submitted_at = Column(DateTime) 
     code = Column(TEXT, nullable=False)
     correct = Column(Boolean)
+    detailed_result = Column(JSON, nullable=True) 
 
 class Assignment(as_Base):
     __tablename__ = "Assignment"

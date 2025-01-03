@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends,Security, status
+from fastapi import APIRouter, HTTPException, Depends,Security, status,BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from assignment.assign_func import *
@@ -11,7 +11,6 @@ from classroom.cs_model import *
 from user.user_func import *
 from user.user_db import *
 import random
-
 security = HTTPBearer()
 
 
@@ -227,3 +226,86 @@ def feedback(data : Feedback
             as_db.commit()
             as_db.refresh(new_feedback)
             return {"status" : "새 피드백을 추가했습니다.", "feedback" : data.feedback}
+
+
+@router.post("/test_assignment")
+async def test_assignment(data: Test,
+                          credentials: HTTPAuthorizationCredentials = Security(security),
+                          as_db: Session = Depends(get_asdb),
+                          cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
+
+    # 테스트케이스 가져오기
+    testcases = as_db.query(AssignmentTestcase).filter(
+        AssignmentTestcase.assignment_id == data.assignment_id
+    ).order_by(AssignmentTestcase.case_number.asc()).all()
+
+    if not testcases:
+        raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
+
+    # 테스트 실행 및 결과 저장
+    results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases)
+
+    # 결과를 AssignmentSubmission 테이블에 저장
+    submission = AssignmentSubmission(
+        user_id=user,
+        assignment_id=data.assignment_id,
+        submitted_at=datetime.utcnow(),
+        code=data.code,
+        correct=all(result["result"] == "Pass" for result in results),
+        detailed_result=detailed_result,
+    )
+    as_db.add(submission)
+    as_db.commit()
+
+    return {
+        "status": "테스트가 완료되었습니다.",
+        "results": results,
+        "total_score": total_score,
+        "is_correct": all(result["result"] == "Pass" for result in results)
+    }
+
+
+def execute_tests_and_get_results(language,code, testcases):
+    from assignment.restricted_execution import execute_code
+
+    results = []
+    total_tests = len(testcases)
+    passed_tests = 0
+
+    for testcase in testcases:
+        input_data = testcase.input
+        expected_output = testcase.expected_output
+
+        # 코드 실행
+        output, error = execute_code(language, code, input_data)
+
+        if error:
+            results.append({
+                "case_number": testcase.case_number,
+                "result": "Error",
+                "details": str(error)
+            })
+        elif output.strip() == expected_output.strip():
+            results.append({
+                "case_number": testcase.case_number,
+                "result": "Pass"
+            })
+            passed_tests += 1
+        else:
+            results.append({
+                "case_number": testcase.case_number,
+                "result": "Fail",
+                "details": f"Expected {expected_output}, but got {output}"
+            })
+
+    # 점수 계산
+    total_score = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
+    detailed_result = results
+
+    return results, detailed_result, total_score
