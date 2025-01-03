@@ -28,6 +28,8 @@ def create_assign(data : AssignmentCreate
     token = credentials.credentials
     user = token_decode(token)
     new_id = None
+    #classid 유무확인
+    assignment = as_db.query(Classroom).filter(Classroom.class_code == data.class_id).first()
     while new_id == None:
         new_id = str(random.randint(10000,99999))
         new_id = check_id(new_id,as_db)
@@ -185,7 +187,6 @@ def submit(data : Submit
     submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.user_id == user).first()
     if submission:
         as_db.delete(submission)
-        as_db.commit()
         as_db.refresh(submission) #제출에 코드 넣으니까 json 파싱을 못함
     new_submission = AssignmentSubmission(assignment_id = data.assignment_id,user_id = user
                                       , submitted_at = datetime.utcnow(),code = data.code

@@ -19,7 +19,7 @@ class AssignmentSubmission(as_Base):
     assignment_id = Column(String(10),nullable=False,index=True)
     user_id = Column(String(20), nullable=False, index=True)
     submitted_at = Column(DateTime) 
-    code = Column(String(15), nullable=False)
+    code = Column(TEXT, nullable=False)
     correct = Column(Boolean)
 
 class Assignment(as_Base):
