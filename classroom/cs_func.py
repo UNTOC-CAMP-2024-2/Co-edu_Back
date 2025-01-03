@@ -8,6 +8,13 @@ from typing import List
 from classroom.cs_schema import *
 
     
+def check_created(user_id,class_code, db: Session):
+    classroom_data = db.query(Classroom).filter(
+        Classroom.class_code == class_code,
+        Classroom.created_by == user_id
+    ).first()
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
 #해당 클래스룸에 존재하는 유저인지 판별
 def check_member(user_id,class_code, db: Session):
     data = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()

@@ -23,13 +23,12 @@ router = APIRouter(
 @router.post("/create") #class id, 내용, 제목 --> 완료
 def create_assign(data : AssignmentCreate
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
-                  ,as_db : Session=Depends(get_asdb)
-                  ,user_db : Session=Depends(get_userdb)):
+                  ,as_db : Session=Depends(get_asdb),cs_db : Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
     new_id = None
     #classid 유무확인
-    assignment = as_db.query(Classroom).filter(Classroom.class_code == data.class_id).first()
+    check_created(user,data.class_id,cs_db)
     while new_id == None:
         new_id = str(random.randint(10000,99999))
         new_id = check_id(new_id,as_db)
@@ -47,11 +46,11 @@ def create_assign(data : AssignmentCreate
 def delete_assign(data : DeleteAssign
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb)
-                  ,user_db : Session=Depends(get_userdb)):
+                  ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(user, user_db)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+    check_created(user,assignment.class_id,cs_db)
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
@@ -85,8 +84,8 @@ def mentor_status(assignment_id : str
                   ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(user, user_db)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
+    check_created(user,assignment.class_id,cs_db)
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
@@ -138,11 +137,11 @@ def mentee_status(assignment_id : str
 @router.post("/testcase") 
 def testcase(data : TestCase,credentials: HTTPAuthorizationCredentials = Security(security),
              as_db : Session=Depends(get_asdb),
-             user_db : Session=Depends(get_userdb)):
+             cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(user, user_db)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+    check_created(user,assignment.class_id,cs_db)
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
@@ -157,11 +156,11 @@ def testcase(data : TestCase,credentials: HTTPAuthorizationCredentials = Securit
 @router.delete("/testcasedelete")
 def testcasedelete(data : DeleteTestCase,credentials: HTTPAuthorizationCredentials = Security(security),
              as_db : Session=Depends(get_asdb),
-             user_db : Session=Depends(get_userdb)):
+             cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(user, user_db)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+    check_created(user,assignment.class_id,cs_db)
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
@@ -201,11 +200,11 @@ def submit(data : Submit
 def feedback(data : Feedback
              ,credentials : HTTPAuthorizationCredentials = Security(security)
              ,as_db : Session=Depends(get_asdb)
-             ,user_db : Session=Depends(get_userdb)):
+             ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_mentor(db=user_db,user_id=user)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).all()
+    check_created(user,assignment.class_id,cs_db)
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
