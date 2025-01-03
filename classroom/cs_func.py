@@ -7,14 +7,14 @@ import random
 from typing import List
 from classroom.cs_schema import *
 
-#클래스룸 생성 및 삭제시 멘토여부확인
-def check_mentor(user_id, db: Session):
-    data = db.query(User).filter(User.user_id == user_id).first()
-    if data.is_mentor == True:
-        return
-    else:
-        raise HTTPException(status_code=400, detail="멘토가 아닙니다. 권한이 없습니다.")
     
+def check_created(user_id,class_code, db: Session):
+    classroom_data = db.query(Classroom).filter(
+        Classroom.class_code == class_code,
+        Classroom.created_by == user_id
+    ).first()
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
 #해당 클래스룸에 존재하는 유저인지 판별
 def check_member(user_id,class_code, db: Session):
     data = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()
