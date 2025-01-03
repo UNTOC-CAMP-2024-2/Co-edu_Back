@@ -1,3 +1,6 @@
 
 .env
 test.py
+/__pycache__
+/classroom/__pycache__
+/user/__pycache__
