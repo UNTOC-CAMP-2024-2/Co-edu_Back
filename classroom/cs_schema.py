@@ -1,6 +1,6 @@
 from pydantic import BaseModel,field_validator
 from fastapi import HTTPException
-
+from typing import Optional
 
 class ClassroomInfo(BaseModel):
     class_name : str
@@ -10,7 +10,7 @@ class ClassroomInfo(BaseModel):
     day : str
     start_time: str
     end_time : str
-    link : str
+    link : Optional[str]
     
 class NewClassroom(ClassroomInfo):
     is_access : bool

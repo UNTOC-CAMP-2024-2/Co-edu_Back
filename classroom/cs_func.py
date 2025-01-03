@@ -49,6 +49,7 @@ def map_classrooms(db_classrooms: List[ClassroomInfo]) -> List[ClassroomInfo]:
             current_member=db_classroom.current_member,
             day=db_classroom.day,
             start_time=db_classroom.start_time,
-            end_time=db_classroom.end_time
+            end_time=db_classroom.end_time,
+            link = db_classroom.link
         ) for db_classroom in db_classrooms
     ]
