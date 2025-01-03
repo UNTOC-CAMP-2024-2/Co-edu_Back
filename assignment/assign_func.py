@@ -10,6 +10,12 @@ def check_id(id, db: Session):
     else:
         return id
     
+def is_assignment_created(id, db: Session):
+    data = db.query(Assignment).filter(Assignment.created_by == id).first()
+    if data :
+        return None
+    else :
+        return id
 
 def add_testcase(db: Session, assignment_id: str, input_data: str, expected_output: str):
     # Get the current highest case_number for the given assignment_id
