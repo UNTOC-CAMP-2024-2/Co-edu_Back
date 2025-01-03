@@ -10,6 +10,7 @@ class ClassroomInfo(BaseModel):
     day : str
     start_time: str
     end_time : str
+    link : str
     
 class NewClassroom(ClassroomInfo):
     is_access : bool
