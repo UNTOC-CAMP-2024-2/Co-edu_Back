@@ -30,7 +30,7 @@ def create_classroom(data: NewClassroom,credentials: HTTPAuthorizationCredential
     cs_data = Classroom(class_name = data.class_name, class_code = new_code, description = data.description,
                      max_member = data.max_member,day = data.day, start_time = data.start_time, 
                      end_time = data.end_time,
-                     is_access = data.is_access, is_free = data.is_free, created_by = user, current_member = 1)
+                     is_access = data.is_access, is_free = data.is_free,link = data.link, created_by = user, current_member = 1)
     usercs_data = UserToClass(user_id = user, class_code = new_code)
     
     cs_db.add(cs_data)

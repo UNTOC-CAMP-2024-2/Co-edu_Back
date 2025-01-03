@@ -14,6 +14,7 @@ class Classroom(cs_Base):
     end_time = Column(String(30))
     is_access = Column(Boolean)
     is_free = Column(Boolean)
+    link = Column(String(255))
     created_by = Column(String(30),nullable = False, index=True)
 
 class UserToClass(cs_Base):   
