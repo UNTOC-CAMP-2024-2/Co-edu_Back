@@ -20,7 +20,7 @@ async def signin_user(user: NewUserForm, user_db : Session = Depends(get_userdb)
     get_duplicate(user, user_db)
     hashed_password = get_password_hash(user.password)
     db_user = User(user_id=user.user_id, password=hashed_password, name=user.name,\
-                     email = user.email, is_mentor = user.is_mentor)
+                    nickname=user.nickname, email = user.email, is_mentor = user.is_mentor)
     user_db.add(db_user)
     user_db.commit()
     user_db.refresh(db_user)
@@ -51,39 +51,21 @@ async def ref_token(data: TokenRefresh):
     return {"access_token": new_access_token, "token_type": "bearer"}
 
 @router.post("/email/send")
-async def send_email_verification(data: EmailVerification, user_db: Session = Depends(get_userdb)):
-    user = get_user_email(data.email, user_db)
+async def send_email_verification(data: EmailVerification, user_db : Session = Depends(get_userdb)):
+    user = get_user_email(data.email,user_db)
     if user:
         raise HTTPException(status_code=409, detail="이미 가입된 이메일주소입니다.")
-    existing_email = user_db.query(VerifiedEmail).filter(VerifiedEmail.user_id == data.user_id, VerifiedEmail.email == data.email).first()
-
-    new_code = str(random.randint(10000, 99999))
-    if existing_email:
-        user_db.delete(existing_email)
-        user_db.commit()
-    
-    db_email = VerifiedEmail(
-        user_id=data.user_id, 
-        email=data.email, 
-        code=new_code, 
-        created_at=datetime.datetime.now()
-    )
+    new_code = str(random.randint(10000,99999))
+    db_email = VerifiedEmail(user_id = data.user_id, email = data.email, code = new_code,created_at = datetime.datetime.now())
     user_db.add(db_email)
     user_db.commit()
     user_db.refresh(db_email)
-    
-    # 인증 메일 발송
     email_send(data.email, new_code)
-    if existing_email:
-        return {"여부": "인증메일을 재전송하였습니다."}
-    else:
-        return {"여부": "성공적으로 인증메일이 발송되었습니다."}
+    return {"여부" : "성공적으로 인증메일이 발송되었습니다."}
 
 @router.post("/email/verification")
 async def verificate_email(data: EmailVerification, user_db : Session = Depends(get_userdb)):
-    user = user_db.query(VerifiedEmail).filter(VerifiedEmail.user_id == data.user_id, VerifiedEmail.email == data.email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="존재하지않는 정보입니다.")
+    user = user_db.query(VerifiedEmail).filter(VerifiedEmail.user_id == data.user_id).first()
     if user.user_id != data.user_id or user.email != data.email or user.code != data.code:
         raise HTTPException(status_code=400, detail="일치하지 않는 정보가 있습니다.")
     user_db.delete(user)
