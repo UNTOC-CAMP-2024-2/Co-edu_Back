@@ -192,3 +192,27 @@ def approve_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredenti
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
     
+@router.get("/class_info", summary="클래스룸 정보확인")
+def class_info(class_code : str
+               , credentials: HTTPAuthorizationCredentials = Security(security)
+               , cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    classroom_data = cs_db.query(Classroom).filter(
+        Classroom.class_code == class_code,
+    ).first()
+    if not classroom_data:
+        raise HTTPException(status_code=404, detail="클래스룸 존재하지않음")
+    usertoclass = cs_db.query(UserToClass).filter(
+        and_(UserToClass.user_id == user, UserToClass.class_code == class_code)
+    ).first()
+    if usertoclass:
+        if classroom_data.created_by != user:
+            return classroom_data
+        else:
+            return classroom_data
+    else:
+        raise HTTPException(status_code=404, detail="해당 크래스룸에 들어가있지 않습니다.")
+
+    
+    

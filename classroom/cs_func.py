@@ -15,6 +15,7 @@ def check_created(user_id,class_code, db: Session):
     ).first()
     if not classroom_data:
         raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
+    
 #해당 클래스룸에 존재하는 유저인지 판별
 def check_member(user_id,class_code, db: Session):
     data = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()
@@ -43,6 +44,7 @@ def create_code(db: Session):
 def map_classrooms(db_classrooms: List[ClassroomInfo]) -> List[ClassroomInfo]:
     return [
         Classroom(
+            class_code = db_classroom.class_code,
             class_name=db_classroom.class_name,
             description=db_classroom.description,
             max_member=db_classroom.max_member,
@@ -53,3 +55,4 @@ def map_classrooms(db_classrooms: List[ClassroomInfo]) -> List[ClassroomInfo]:
             link = db_classroom.link
         ) for db_classroom in db_classrooms
     ]
+

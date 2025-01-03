@@ -4,6 +4,7 @@ from typing import Optional
 
 class ClassroomInfo(BaseModel):
     class_name : str
+    class_code : str
     description : str
     max_member : int
     current_member : int
