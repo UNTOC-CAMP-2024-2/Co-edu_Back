@@ -8,7 +8,6 @@ class User(user_Base):
     password = Column(String(255), nullable=False)
     email = Column(String(40), nullable=False, index=True)
     name = Column(String(15), nullable=False)
-    nickname = Column(String(15), nullable=False, unique= True, index=True)
     is_mentor = Column(Boolean)
     
 class VerifiedEmail(user_Base):
