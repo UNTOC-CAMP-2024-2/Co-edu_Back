@@ -27,4 +27,4 @@ class PendingApproval(cs_Base):
     id = Column(Integer, primary_key=True, index=True) 
     user_id = Column(String(20), nullable=False, index=True)  
     class_code = Column(String(10), nullable=False, index=True)  
-    requested_at = Column(String, nullable=False)
+    requested_at = Column(String(20), nullable=False)
