@@ -2,7 +2,8 @@ import subprocess
 import ast
 import tempfile
 import os
-
+import re
+import shutil 
 
 def validate_code(code: str):
     try:
@@ -21,11 +22,24 @@ def validate_code(code: str):
         return False, f"Code validation error: {str(e)}"
 
 
-def get_execution_command(language: str, code_file: str) -> list:
+def get_java_class_name(code: str) -> str:
+    """
+    Java 코드에서 public class 이름을 추출합니다.
+    """
+    match = re.search(r'public\s+class\s+(\w+)', code)
+    if match:
+        return match.group(1)
+    raise ValueError("No public class found in Java code.")
+
+
+def get_execution_command(language: str, code_file: str, class_name: str = None) -> list:
+    """
+    언어에 맞는 실행 명령을 반환합니다. 자바의 경우 class_name과 경로를 포함합니다.
+    """
     commands = {
         "python": ["python", code_file],
         "javascript": ["node", code_file],
-        "java": ["javac", code_file, "&&", "java", code_file.replace(".java", "")],
+        "java": ["javac", code_file, "&&", "java", "-cp", os.path.dirname(code_file), class_name],
         "c": ["gcc", code_file, "-o", "a.out", "&&", "./a.out"],
         "cpp": ["g++", code_file, "-o", "a.out", "&&", "./a.out"]
     }
@@ -35,6 +49,9 @@ def get_execution_command(language: str, code_file: str) -> list:
 
 
 def get_file_extension(language: str) -> str:
+    """
+    언어별 파일 확장자를 반환합니다.
+    """
     extensions = {
         "python": ".py",
         "javascript": ".js",
@@ -48,39 +65,51 @@ def get_file_extension(language: str) -> str:
 
 
 def execute_code(language: str, code: str, input_data: str):
-    # 코드 유효성 검증 (Python 전용)
+    """
+    코드를 실행하는 함수로, 자바의 파일명 규칙을 처리합니다.
+    """
     if language == "python":
         is_valid, error_message = validate_code(code)
         if not is_valid:
             return None, f"Code validation failed: {error_message}"
 
     try:
-        # 임시 파일 생성
-        with tempfile.NamedTemporaryFile(delete=False, suffix=get_file_extension(language)) as code_file:
-            code_file.write(code.encode('utf-8'))
-            code_file.flush()
-            code_file_path = code_file.name
+        if language == "java":
+            class_name = get_java_class_name(code)
+            file_name = f"{class_name}.java"
+        else:
+            file_name = f"temp{get_file_extension(language)}"
 
-        # 실행 명령 가져오기
-        command = get_execution_command(language, code_file_path)
+        # 임시 디렉토리 생성 및 파일 저장
+        temp_dir = tempfile.mkdtemp()
+        code_file_path = os.path.join(temp_dir, file_name)
 
-        # subprocess로 실행
+        with open(code_file_path, "w", encoding="utf-8") as code_file:
+            code_file.write(code)
+
+        if language == "java":
+            command = get_execution_command(language, code_file_path, class_name)
+        else:
+            command = get_execution_command(language, code_file_path)
+
         process = subprocess.run(
-            " ".join(command),  # 명령을 문자열로 전달
+            " ".join(command),
             input=input_data,
             text=True,
-            shell=True,  # 쉘 실행 필요 (&& 지원)
+            shell=True,
             capture_output=True,
-            timeout=3  # 실행 시간 제한
+            timeout=3
         )
         return process.stdout.strip(), process.stderr.strip()
     except subprocess.TimeoutExpired:
         return None, "Execution timed out."
+    except ValueError as e:
+        return None, str(e)
     except Exception as e:
         return None, str(e)
     finally:
-        # 임시 파일 삭제
-        if 'code_file_path' in locals() and os.path.exists(code_file_path):
-            os.remove(code_file_path)
+        # 디렉토리 및 파일 삭제
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)  # 디렉토리와 내부 파일을 모두 삭제
         if os.path.exists("a.out"):  # C, C++ 실행 파일 삭제
             os.remove("a.out")
