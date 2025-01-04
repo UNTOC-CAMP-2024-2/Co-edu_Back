@@ -52,7 +52,9 @@ def map_classrooms(db_classrooms: List[ClassroomInfo]) -> List[ClassroomInfo]:
             day=db_classroom.day,
             start_time=db_classroom.start_time,
             end_time=db_classroom.end_time,
-            link = db_classroom.link
+            link = db_classroom.link,
+            is_free = db_classroom.is_free,
+            created_by = db_classroom.created_by
         ) for db_classroom in db_classrooms
     ]
 

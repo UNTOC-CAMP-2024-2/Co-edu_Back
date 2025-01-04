@@ -12,10 +12,11 @@ class ClassroomInfo(BaseModel):
     start_time: str
     end_time : str
     link : Optional[str]
+    is_free : bool
+    created_by : str
     
 class NewClassroom(ClassroomInfo):
     is_access : bool
-    is_free : bool
 
 class ClassroomCode(BaseModel):
     class_code : str
