@@ -208,9 +208,9 @@ def class_info(class_code : str
     ).first()
     if usertoclass:
         if classroom_data.created_by != user:
-            return classroom_data
+            return classroom_data , False
         else:
-            return classroom_data
+            return classroom_data , True
     else:
         raise HTTPException(status_code=404, detail="해당 크래스룸에 들어가있지 않습니다.")
 
