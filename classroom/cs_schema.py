@@ -17,6 +17,7 @@ class ClassroomInfo(BaseModel):
     
 class NewClassroom(ClassroomInfo):
     is_access : bool
+    is_free : bool
 
 class ClassroomCode(BaseModel):
     class_code : str
