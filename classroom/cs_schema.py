@@ -17,7 +17,6 @@ class ClassroomInfo(BaseModel):
     
 class NewClassroom(BaseModel):
     class_name : str
-    class_code : str
     description : str
     max_member : int
     current_member : int
