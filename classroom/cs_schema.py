@@ -15,7 +15,16 @@ class ClassroomInfo(BaseModel):
     is_free : bool
     created_by : str
     
-class NewClassroom(ClassroomInfo):
+class NewClassroom(BaseModel):
+    class_name : str
+    class_code : str
+    description : str
+    max_member : int
+    current_member : int
+    day : str
+    start_time: str
+    end_time : str
+    link : Optional[str]
     is_access : bool
     is_free : bool
 
