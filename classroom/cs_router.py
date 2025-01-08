@@ -84,9 +84,9 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
         )
         cs_db.add(new_pending)
         cs_db.commit()
-        return "승인 대기 중입니다. 스터디장의 승인을 기다려주세요."
+        return False #승인대기로 넘어감을 의미
     
-    # 무료라면 바로 가입
+
     check_member(user, data.class_code, cs_db)
     usercs_data = UserToClass(user_id=user, class_code=data.class_code)
     if classroom_data.max_member > classroom_data.current_member:
@@ -94,7 +94,7 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
         cs_db.add(usercs_data)
         cs_db.commit()
         cs_db.refresh(classroom_data)
-        return "정상적으로 해당 클래스룸에 입장하셨습니다."
+        return True  #자유가입일시 바로입장장
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
 
