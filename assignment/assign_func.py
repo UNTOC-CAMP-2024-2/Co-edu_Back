@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from assignment.assign_model import *
-
+from fastapi import HTTPException
 
 #랜덤코드 발급시 중복확인
 def check_id(id, db: Session):
@@ -10,49 +10,30 @@ def check_id(id, db: Session):
     else:
         return id
     
-def is_assignment_created(id, db: Session):
-    data = db.query(Assignment).filter(Assignment.created_by == id).first()
-    if data :
-        return None
-    else :
+def is_assignment_created(id, assignment_id, db: Session):
+    data = db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
+    if data == None :
+        return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
+    if data.created_by == id :
         return id
+    else :
+        return HTTPException(status_code=409, detail="과제 생성자가 아닙니다.")
 
-def add_testcase(db: Session, assignment_id: str, input_data: str, expected_output: str):
-    # Get the current highest case_number for the given assignment_id
-    max_case_number = (db.query(AssignmentTestcase.case_number)
-                        .filter(AssignmentTestcase.assignment_id == assignment_id)
-                        .order_by(AssignmentTestcase.case_number.desc())
-                        .first())
-    new_case_number = (max_case_number[0] + 1) if max_case_number else 1
-
-    new_testcase = AssignmentTestcase(
-        assignment_id=assignment_id,
-        case_number=new_case_number,
-        input=input_data,
-        expected_output=expected_output
-    )
-    db.add(new_testcase)
+def create_testcase(tc_list, asid , db:Session):
+    for testcase in tc_list :
+        new_testcase = AssignmentTestcase(assignment_id = asid, input = testcase.input_data, expected_output = testcase.expected_output)
+        db.add(new_testcase)
     db.commit()
-    db.refresh(new_testcase)
-    return new_case_number
 
-def delete_testcase(db: Session, assignment_id: int, case_number: int):
+def delete_testcase(db: Session, assignment_id: int):
     # Delete the specified testcase
     db.query(AssignmentTestcase)\
-      .filter(AssignmentTestcase.assignment_id == assignment_id, AssignmentTestcase.case_number == case_number)\
-      .delete()
+      .filter(AssignmentTestcase.assignment_id == assignment_id).delete()
     db.commit()
 
-    # Reorder the remaining cases for the assignment_id
-    testcases = db.query(AssignmentTestcase)\
-                  .filter(AssignmentTestcase.assignment_id == assignment_id)\
-                  .order_by(AssignmentTestcase.case_number.asc())\
-                  .all()
-
-    for index, testcase in enumerate(testcases, start=1):
-        testcase.case_number = index
-    db.commit()
-
+def modify_testcase(tc_list, asid, db:Session):
+    delete_testcase(db,asid)
+    create_testcase(tc_list,asid,db)
 
 def delete_assignment(db: Session, assignment):
 

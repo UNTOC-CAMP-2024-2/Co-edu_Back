@@ -1,28 +1,26 @@
 from pydantic import BaseModel
 from datetime import datetime
 
-class AssignmentCreate(BaseModel):
-    class_id : str
-    title : str
-    description : str
-    deadline : datetime 
-
 class TestCase(BaseModel):
-    assignment_id : str
     input_data : str
     expected_output: str
 
-class DeleteTestCase(BaseModel):
-    assignment_id : str
-    case_number : int
+class AssignmentData(BaseModel):
+    class_id : str
+    title : str
+    description : str
+    testcase : list[TestCase]
+#deadline 삭제 
 
-class DeleteAssign(BaseModel):
+class AssignmentModify(BaseModel):
     assignment_id : str
+    description : str
+    title : str
+    testcase : list[TestCase]
 
 class Submit(BaseModel):
     assignment_id : str
     code : str
-    output : str
 
 class Feedback(BaseModel):
     assignment_id : str

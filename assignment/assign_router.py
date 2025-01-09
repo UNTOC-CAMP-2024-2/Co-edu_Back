@@ -20,8 +20,8 @@ router = APIRouter(
 )
 
 #assignment 생성
-@router.post("/create") #class id, 내용, 제목 --> 완료
-def create_assign(data : AssignmentCreate
+@router.post("/create", summary="과제 생성")
+def create_assign(data : AssignmentData
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb),cs_db : Session = Depends(get_csdb)):
     token = credentials.credentials
@@ -35,26 +35,45 @@ def create_assign(data : AssignmentCreate
 
     new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
                            ,title = data.title, description = data.description
-                           ,created_at = datetime.utcnow(), deadline = data.deadline
                            ,created_by = user)
+    #assignment 기본 정보 저장
+    #testcase 추가 필요
     as_db.add(new_assign)
     as_db.commit()
     as_db.refresh(new_assign)
+    create_testcase(data.testcase,new_id,as_db)
     return {"status" : "과제가 정상적으로 생성되었습니다.","assignment_id": new_id}
 
+
+#testcase는 리스트로 받아서 쪼개서 저장
+@router.post("/modify",summary="과제 수정")
+def modify_assign(data : AssignmentModify ,credentials: HTTPAuthorizationCredentials = Security(security)
+                  ,as_db : Session=Depends(get_asdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    is_assignment_created(user,data.assignment_id,as_db)
+    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+    assignment.description = data.description
+    assignment.title = data.title
+    as_db.commit()
+    modify_testcase(data.testcase,data.assignment_id,as_db)
+    as_db.commit()
+    #과제 정보 수정
+
+
 @router.delete("/delete") #assignment delete --> 완료
-def delete_assign(data : DeleteAssign
+def delete_assign(assignment_id : str
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb)
                   ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
         check_created(user,assignment.class_id,cs_db)
-        is_assignment_created(user,as_db) #권한쟁의
+        is_assignment_created(user,assignment_id,as_db) #권한쟁의
         if user == assignment.created_by :
             delete_assignment(db= as_db, assignment=assignment)
             return "성공적으로 과제가 삭제되었습니다."
@@ -68,15 +87,83 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         testcases = (as_db.query(AssignmentTestcase)
-                    .filter(AssignmentTestcase.assignment_id == assignment_id)
-                    .order_by(AssignmentTestcase.case_number.asc())
-                    .all())
+                    .filter(AssignmentTestcase.assignment_id == assignment_id).all())
         return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
-                ,"deadline" : assignment.description,"created_at" : assignment.created_at
                 ,"created_by" : assignment.created_by,"testcases" : testcases}
 
+@router.get("/status/maker/all")
+def mentor_status_all(class_id : str
+                  ,credentials: HTTPAuthorizationCredentials = Security(security)
+                  ,as_db : Session=Depends(get_asdb)
+                  ,cs_db : Session=Depends(get_csdb)) :
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    token = credentials.credentials
+    user = token_decode(token)
+    if classroom is None:
+        raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
+    check_created(user,class_id,cs_db)
+    classroom_users = classroom.current_member
+    assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
+    if assignments == None :
+        raise HTTPException(status_code=404, detail="존재하는 과제가 없습니다.")
+    result = []
+    for assignment in assignments:
+        submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id).all()
+        if submissions == [] :
+            assignment_status = "undone"
+        elif len(submissions) == classroom_users :
+            assignment_status = "done"
+        else :
+            assignment_status = "halfdone"
+        feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id).all()
 
+        if feedbacks == [] :
+            feedback_status = "notGaveFeedbackAll"
+        elif len(feedbacks) == len(submissions) :
+            feedback_status = "gaveFeedbackAll"
+        else :
+            feedback_status = "gaveFeedbackFew"
+        as_data = {
+            "assignment_id" : assignment.assignment_id,
+            "assignment_status" : assignment_status
+            ,"feedback_status" : feedback_status
+            ,"feedbacks" : feedbacks
+            ,"submissions" : submissions}
+        result.append(as_data)
+    return result
+
+@router.get("/status/mentee/all")
+def mentee_status_all(class_id : str
+                  ,credentials : HTTPAuthorizationCredentials = Security(security)
+                  ,as_db : Session=Depends(get_asdb),
+                  cs_db: Session=Depends(get_csdb)):
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    token = credentials.credentials
+    user = token_decode(token)
+    if classroom is None:
+        raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
+    
+    assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
+    if assignments == None :
+        return HTTPException(status_code=404, detail="클래스룸 내 과제가 존재하지 않습니다.")
+    else :
+        result = []
+        for assignment in assignments :
+            submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id
+                                                                ,AssignmentSubmission.user_id == user).first()
+            if submission == None :
+                as_data = {"assignment_id" : assignment.assignment_id, "status" : "제출 이력이 존재하지 않음"}
+                result.append(as_data)
+            else :
+                feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
+                                                                AssignmentFeedBack.user_id == user).first()
+                as_data = {"assignment_id" : assignment.assignment_id
+                        , "status" : submission.correct,"code" : submission.code
+                        , "feedback" : feedback}
+                result.append(as_data)
+    return result
+#멘토 멘티 둘다 전체반환 만들기
 @router.get("/status/maker") #
 def mentor_status(assignment_id : str
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
@@ -90,7 +177,7 @@ def mentor_status(assignment_id : str
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         check_created(user,assignment.class_id,cs_db)
-        is_assignment_created(user,as_db)
+        is_assignment_created(user,assignment_id,as_db)
         
         class_id = assignment.class_id
         classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
@@ -119,6 +206,8 @@ def mentor_status(assignment_id : str
                 ,"feedbacks" : feedbacks
                 ,"submissions" : submissions}
 
+
+
 # #assignment id에 따른 반환 -> 개개인(멘티 전용 과제 상태) assignment_id, user_id, feedback,status,code(제출한) 반환
 @router.get("/status/mentee")
 def mentee_status(assignment_id : str
@@ -141,42 +230,6 @@ def mentee_status(assignment_id : str
                 , "status" : submission.correct,"code" : submission.code
                 , "feedback" : feedback}
 
-
-@router.post("/testcase") 
-def testcase(data : TestCase,credentials: HTTPAuthorizationCredentials = Security(security),
-             as_db : Session=Depends(get_asdb),
-             cs_db : Session=Depends(get_csdb)):
-    token = credentials.credentials
-    user = token_decode(token)
-    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
-    if assignment == None :
-        return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
-    else:
-        if user == assignment.created_by :
-            case_number = add_testcase(db = as_db,assignment_id=data.assignment_id,
-                         input_data=data.input_data,
-                         expected_output=data.expected_output)
-            return {"status" : "테스트케이스를 성공적으로 추가했습니다.", "case_number" : case_number}
-        else :
-            return HTTPException(status_code=400, detail="과제를 생성한 유저가 아닙니다.")
-        
-@router.delete("/testcasedelete")
-def testcasedelete(data : DeleteTestCase,credentials: HTTPAuthorizationCredentials = Security(security),
-             as_db : Session=Depends(get_asdb),
-             cs_db : Session=Depends(get_csdb)):
-    token = credentials.credentials
-    user = token_decode(token)
-    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
-    check_created(user,assignment.class_id,cs_db)
-    if assignment == None :
-        return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
-    else:
-        if user == assignment.created_by :
-            delete_testcase(db = as_db,assignment_id=data.assignment_id,
-                         case_number=data.case_number)
-            return "테스트케이스를 성공적으로 삭제했습니다."
-        else :
-            return HTTPException(status_code=400, detail="과제를 생성한 유저가 아닙니다.")
 
 @router.get("/class_assignments") # class id에 해당하는 전체 assignments들을 반환 
 def info(class_id : str, as_db : Session=Depends(get_asdb),cs_db : Session=Depends(get_csdb)):
@@ -202,7 +255,7 @@ def submit(data : Submit
         as_db.delete(submission)
         as_db.refresh(submission) #제출에 코드 넣으니까 json 파싱을 못함
     new_submission = AssignmentSubmission(assignment_id = data.assignment_id,user_id = user
-                                      , submitted_at = datetime.utcnow(),code = data.code
+                                      , code = data.code
                                       , correct = True)
     as_db.add(new_submission)
     as_db.commit()
@@ -250,12 +303,11 @@ def feedback(data : Feedback
              ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).all()
+    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
     if assignment == None :
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
-        check_created(user,assignment.class_id,cs_db)
-        is_assignment_created(user,as_db)
+        is_assignment_created(user,data.assignment_id,as_db)
         feedback = as_db.query(AssignmentFeedBack).\
                    filter(AssignmentFeedBack.assignment_id == data.assignment_id,
                           AssignmentFeedBack.user_id == data.mentee_id).first()
@@ -304,7 +356,6 @@ async def test_assignment(data: Test,
     submission = AssignmentSubmission(
         user_id=user,
         assignment_id=data.assignment_id,
-        submitted_at=datetime.utcnow(),
         code=data.code,
         correct=all(result["result"] == "Pass" for result in results),
         detailed_result=detailed_result,

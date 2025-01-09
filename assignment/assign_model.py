@@ -18,7 +18,6 @@ class AssignmentSubmission(as_Base):
     id = Column(Integer, primary_key=True, index=True)
     assignment_id = Column(String(10),nullable=False,index=True)
     user_id = Column(String(20), nullable=False, index=True)
-    submitted_at = Column(DateTime) 
     code = Column(TEXT, nullable=False)
     correct = Column(Boolean)
     detailed_result = Column(JSON, nullable=True) 
@@ -30,26 +29,14 @@ class Assignment(as_Base):
     class_id = Column(String(10),unique=True,nullable=False,index=True)
     title = Column(String(255), nullable=False, index=True)
     description = Column(TEXT, nullable=False, index=True)
-    deadline = Column(DateTime)
-    created_at = Column(DateTime)
     created_by = Column(String(20),nullable=False, index=True)
 
 class AssignmentTestcase(as_Base):
     __tablename__ = "Testcase"
     id = Column(Integer, primary_key=True, index=True)
     assignment_id = Column(String(10),nullable=False,index=True)
-    case_number = Column(Integer,nullable=False)
     input = Column(TEXT)
     expected_output = Column(TEXT)
-
-
-#멘티용
-# class AssignmentStatus(as_Base): 
-#     __tablename__ = "AssignmnetStatus"
-#     id = Column(Integer, primary_key=True, index=True)
-#     assignment_id = Column(String(10),nullable=False,index=True)
-#     user_id = Column(String(20), nullable=False, index=True)
-#     status = Column(Boolean, index=True)
 
 class AssignmentFeedBack(as_Base):
     __tablename__ = "AssignmentFeedBack"
