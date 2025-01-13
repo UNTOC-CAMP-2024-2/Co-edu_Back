@@ -194,9 +194,13 @@ def mysubmission(class_id : str
             else :
                 feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
                                                                 AssignmentFeedBack.user_id == user).first()
+                if feedback == None :
+                    pass
+                else :
+                    feedback = feedback.feedback
                 as_data = {"assignment_id" : assignment.assignment_id , "title" : assignment.title
                         , "status" : submission.correct,"code" : submission.code
-                        , "feedback" : feedback.feedback}
+                        , "feedback" : feedback}
                 result.append(as_data)
     return result
 @router.get("/myfeedbacks",summary="받은 피드백 표시")
