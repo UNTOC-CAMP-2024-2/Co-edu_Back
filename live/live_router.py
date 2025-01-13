@@ -37,7 +37,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.websocket("/ws/{room_id}/{role}")
+@router.websocket("/{room_id}/{role}/ws")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, role: str):
     # 클라이언트 연결 처리
     await manager.connect(room_id, role, websocket)
