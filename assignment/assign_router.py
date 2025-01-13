@@ -399,7 +399,7 @@ async def test_assignment(data: Test,
     # 테스트케이스 가져오기
     testcases = as_db.query(AssignmentTestcase).filter(
         AssignmentTestcase.assignment_id == data.assignment_id
-    ).order_by(AssignmentTestcase.case_number.asc()).all()
+    ).all()
 
     if not testcases:
         raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
@@ -433,7 +433,7 @@ def execute_tests_and_get_results(language,code, testcases):
     total_tests = len(testcases)
     passed_tests = 0
 
-    for testcase in testcases:
+    for num,testcase in enumerate(testcases):
         input_data = testcase.input
         expected_output = testcase.expected_output
 
@@ -442,19 +442,19 @@ def execute_tests_and_get_results(language,code, testcases):
 
         if error:
             results.append({
-                "case_number": testcase.case_number,
+                "case_number": num+1,
                 "result": "Error",
                 "details": str(error)
             })
         elif output.strip() == expected_output.strip():
             results.append({
-                "case_number": testcase.case_number,
+                "case_number": num+1,
                 "result": "Pass"
             })
             passed_tests += 1
         else:
             results.append({
-                "case_number": testcase.case_number,
+                "case_number": num+1,
                 "result": "Fail",
                 "details": f"Expected {expected_output}, but got {output}"
             })
