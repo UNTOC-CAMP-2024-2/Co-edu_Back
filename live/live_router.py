@@ -57,3 +57,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, role: str):
     except WebSocketDisconnect:
         # 클라이언트가 연결을 끊었을 때
         manager.disconnect(room_id, websocket)
+
+@router.get("/")
+async def init_test():
+    return {"init"}
