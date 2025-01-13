@@ -154,13 +154,19 @@ def mentee_status_all(class_id : str
             submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id
                                                                 ,AssignmentSubmission.user_id == user).first()
             if submission == None :
-                as_data = {"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "제출 이력이 존재하지 않음"}
+                as_data = {"assignment_id" : assignment.assignment_id, "title" : assignment.title, "description" : assignment.description,
+                "status" : False}
                 result.append(as_data)
             else :
                 feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
                                                                 AssignmentFeedBack.user_id == user).first()
+                if feedback == None :
+                    pass
+                else :
+                    feedback = True
                 as_data = {"assignment_id" : assignment.assignment_id , "title" : assignment.title
-                        , "status" : submission.correct,"code" : submission.code
+                , "description" : assignment.description
+                        , "status" : submission.correct,"code" : submission.code 
                         , "feedback" : feedback}
                 result.append(as_data)
     return result
