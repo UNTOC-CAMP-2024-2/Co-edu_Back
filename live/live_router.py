@@ -2,7 +2,7 @@ from fastapi import WebSocket, WebSocketDisconnect,APIRouter
 from typing import Dict, List
 
 router = APIRouter(
-    prefix="/user",
+    prefix="/live_classroom",
 )
 # 클라이언트 연결을 관리하기 위한 데이터 구조
 class ConnectionManager:
