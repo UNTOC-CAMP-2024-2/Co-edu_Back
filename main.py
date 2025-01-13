@@ -9,6 +9,7 @@ from classroom.cs_db import cs_Base,cs_engine
 from assignment.assign_router import router as as_router
 from assignment.assign_db import as_Base,as_engine
 
+from live.live_router import router as live_router
 # from assignment.assign_router import router as assign_router
 from variable import *
 
@@ -21,6 +22,7 @@ as_Base.metadata.create_all(bind=as_engine)
 app.include_router(user_router, tags=["user"])
 app.include_router(cs_router, tags=["classroom"])
 app.include_router(as_router, tags=["assignment"])
+app.include_router(live_router, tags=["live_classroom"])
 
 
 @app.get("/")

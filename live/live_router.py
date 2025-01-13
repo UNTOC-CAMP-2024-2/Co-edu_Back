@@ -1,8 +1,9 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect,APIRouter
 from typing import Dict, List
 
-app = FastAPI()
-
+router = APIRouter(
+    prefix="/user",
+)
 # 클라이언트 연결을 관리하기 위한 데이터 구조
 class ConnectionManager:
     def __init__(self):
@@ -36,7 +37,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.websocket("/ws/{room_id}/{role}")
+@router.websocket("/ws/{room_id}/{role}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, role: str):
     # 클라이언트 연결 처리
     await manager.connect(room_id, role, websocket)
