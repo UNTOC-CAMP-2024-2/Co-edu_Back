@@ -1,96 +1,102 @@
-from fastapi import WebSocket, WebSocketDisconnect, APIRouter
+from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends, Security, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Dict, List
+from user.user_func import *
 
 router = APIRouter(
     prefix="/live_classroom",
 )
-
+security = HTTPBearer()
 
 class StudyRoomManager:
     def __init__(self):
-        # key: room_id, value: {'host': WebSocket, 'students': List[WebSocket]}
-        self.rooms: Dict[str, Dict[str, List[WebSocket]]] = {}
+        # Structure: {room_id: {'host': WebSocket, 'students': {user_id: WebSocket}}}
+        self.rooms: Dict[str, Dict[str, Dict[str, WebSocket]]] = {}
 
-    async def connect(self, room_id: str, role: str, websocket: WebSocket):
+    async def connect(self, room_id: str, role: str, user_id: str, websocket: WebSocket):
         """
-        Connect a client to a specific room based on its role (host or student).
+        Connects a user (host or student) to a room.
         """
         await websocket.accept()
         if room_id not in self.rooms:
-            self.rooms[room_id] = {'host': None, 'students': []}
+            self.rooms[room_id] = {"host": None, "students": {}}
 
         if role == "host":
-            self.rooms[room_id]['host'] = websocket
+            self.rooms[room_id]["host"] = websocket
             print(f"[INFO] Host connected to room {room_id}")
         elif role == "student":
-            self.rooms[room_id]['students'].append(websocket)
-            print(f"[INFO] Student connected to room {room_id}")
+            self.rooms[room_id]["students"][user_id] = websocket
+            print(f"[INFO] Student {user_id} connected to room {room_id}")
 
     def disconnect(self, room_id: str, websocket: WebSocket):
         """
-        Disconnect a client from the room and clean up empty rooms.
+        Disconnects a user from the room.
         """
         if room_id in self.rooms:
-            if websocket == self.rooms[room_id]['host']:
-                self.rooms[room_id]['host'] = None
+            if websocket == self.rooms[room_id]["host"]:
+                self.rooms[room_id]["host"] = None
                 print(f"[INFO] Host disconnected from room {room_id}")
-            elif websocket in self.rooms[room_id]['students']:
-                self.rooms[room_id]['students'].remove(websocket)
-                print(f"[INFO] Student disconnected from room {room_id}")
+            else:
+                for user_id, ws in list(self.rooms[room_id]["students"].items()):
+                    if ws == websocket:
+                        del self.rooms[room_id]["students"][user_id]
+                        print(f"[INFO] Student {user_id} disconnected from room {room_id}")
+                        break
 
-            # Clean up empty rooms
-            if self.rooms[room_id]['host'] is None and not self.rooms[room_id]['students']:
+            # Remove the room if it is empty
+            if not self.rooms[room_id]["host"] and not self.rooms[room_id]["students"]:
                 del self.rooms[room_id]
                 print(f"[INFO] Room {room_id} removed (empty).")
 
     async def send_to_host(self, room_id: str, message: str):
         """
-        Send a message to the host of the room.
+        Sends a message to the host of a room.
         """
-        if room_id in self.rooms and self.rooms[room_id]['host']:
-            try:
-                await self.rooms[room_id]['host'].send_text(message)
-                print(f"[INFO] Sent message to host in room {room_id}: {message}")
-            except Exception as e:
-                print(f"[ERROR] Failed to send message to host: {e}")
+        if room_id in self.rooms and self.rooms[room_id]["host"]:
+            await self.rooms[room_id]["host"].send_text(message)
 
-    async def broadcast_to_students(self, room_id: str, message: str):
+    async def send_to_student(self, room_id: str, user_id: str, message: str):
         """
-        Broadcast a message to all students in the room.
+        Sends a message to a specific student by user_id.
         """
-        if room_id in self.rooms:
-            for student in self.rooms[room_id]['students']:
-                try:
-                    await student.send_text(message)
-                    print(f"[INFO] Sent message to a student in room {room_id}: {message}")
-                except Exception as e:
-                    print(f"[ERROR] Failed to send message to student: {e}")
+        if room_id in self.rooms and user_id in self.rooms[room_id]["students"]:
+            await self.rooms[room_id]["students"][user_id].send_text(message)
 
 
 manager = StudyRoomManager()
 
 
 @router.websocket("/{room_id}/{role}/ws")
-async def websocket_endpoint(websocket: WebSocket, room_id: str, role: str):
+async def websocket_endpoint(
+    websocket: WebSocket,
+    room_id: str,
+    role: str,
+    credentials: HTTPAuthorizationCredentials = Security(security),
+):
     """
     WebSocket endpoint for handling host and student connections.
     """
-    await manager.connect(room_id, role, websocket)
     try:
+        # Decode the token to extract user_id
+        token = credentials.credentials
+        user_id = token_decode(token)
+
+        # Connect the user to the room
+        await manager.connect(room_id, role, user_id, websocket)
+
         while True:
-            # Receive a message from the WebSocket
             data = await websocket.receive_text()
-            print(f"[INFO] Received message in room {room_id} from {role}: {data}")
+            print(f"[INFO] Message in room {room_id} from {role} ({user_id}): {data}")
 
             if role == "student":
-                # Forward messages from students to the host
-                await manager.send_to_host(room_id, data)
+                await manager.send_to_host(room_id, f"Student {user_id}: {data}")
             elif role == "host":
-                # Broadcast messages from the host to all students
-                await manager.broadcast_to_students(room_id, data)
+                for student_id, student_ws in manager.rooms[room_id]["students"].items():
+                    await student_ws.send_text(f"Host: {data}")
+
     except WebSocketDisconnect:
-        # Handle client disconnection
         manager.disconnect(room_id, websocket)
-        print(f"[INFO] {role} disconnected from room {room_id}.")
+    except HTTPException as e:
+        print(f"[ERROR] Authentication failed: {e.detail}")
     except Exception as e:
         print(f"[ERROR] Unexpected error: {e}")
