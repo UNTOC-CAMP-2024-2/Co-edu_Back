@@ -51,3 +51,7 @@ class UpdateClassroomInfoRequest(BaseModel):
     is_access: bool
     is_free: bool
     link: str
+
+class KickUserForm(BaseModel):
+    class_code: str
+    kick_user: str
