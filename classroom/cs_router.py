@@ -142,24 +142,6 @@ def search_classroom(search: str = None, cs_db: Session = Depends(get_csdb)):
     return map_classrooms(db_classrooms)  
 
 
-@router.get("/pending_approvals/{class_code}", response_model=List[PendingApprovalInfo], summary="클래스룸 입장대기멤버 확인하기")
-def get_pending_approvals(class_code: str, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
-    token = credentials.credentials
-    user = token_decode(token)
-    
-    # 해당 유저가 요청한 class_code의 스터디장인지 확인
-    classroom_data = cs_db.query(Classroom).filter(
-        Classroom.class_code == class_code,
-        Classroom.created_by == user
-    ).first()
-    
-    if not classroom_data:
-        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아니거나 존재하지 않습니다.")
-    
-    # 해당 클래스룸의 승인 대기 목록 조회
-    pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
-    return [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]
-
 @router.post("/approve" , summary="입장대기중인 멤버 승인하기")
 def approve_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
@@ -191,6 +173,31 @@ def approve_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredenti
         return "승인이 완료되었습니다."
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
+@router.delete("/deny" , summary="입장대기중인 멤버 거절하기")
+def deny_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    
+    # 해당 유저가 스터디장인지 확인
+    classroom_data = cs_db.query(Classroom).filter(
+        Classroom.class_code == data.class_code,
+        Classroom.created_by == user
+    ).first()
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
+    
+    pending = cs_db.query(PendingApproval).filter(
+        PendingApproval.user_id == data.user_id,
+        PendingApproval.class_code == data.class_code
+    ).first()
+    
+    if not pending:
+        raise HTTPException(status_code=404, detail="승인 대기 중인 사용자를 찾을 수 없습니다.")
+    
+    cs_db.delete(pending)
+    cs_db.commit()  # 변경 사항을 DB에 반영
+    
+    return {"detail": "사용자가 성공적으로 거절되었습니다."}
     
 @router.get("/class_info", summary="클래스룸 정보확인")
 def class_info(class_code : str
@@ -215,4 +222,23 @@ def class_info(class_code : str
         raise HTTPException(status_code=404, detail="해당 크래스룸에 들어가있지 않습니다.")
 
     
+@router.get("/show_edit", summary="설정부분 정보불러오기")
+def show_edit(class_code : str
+              , credentials: HTTPAuthorizationCredentials = Security(security)
+                , cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+
+    classroom_data = cs_db.query(Classroom).filter(
+        Classroom.class_code == class_code,
+        Classroom.created_by == user
+    ).first()
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
     
+    usertoclass = cs_db.query(UserToClass).filter(
+        and_(UserToClass.class_code == class_code)
+    ).all()
+
+    pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
+    return {"클래스룸정보" : classroom_data, "유저정보" : usertoclass, "승인대기" : [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]}
