@@ -241,7 +241,7 @@ def show_edit(class_code : str
     ).all()
 
     pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
-    return {"클래스룸정보" : classroom_data, "유저정보" : usertoclass, "승인대기" : [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]}
+    return {"class_info" : classroom_data, "user_info" : usertoclass, "approval" : [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]}
 
 @router.patch("/edit_classinfo", summary="클래스룸 정보 수정하기")
 def edit_classinfo(data: UpdateClassroomInfoRequest,
