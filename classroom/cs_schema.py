@@ -39,3 +39,15 @@ class PendingApprovalInfo(BaseModel):
 class ApprovalRequest(BaseModel):
     user_id: str
     class_code: str
+
+class UpdateClassroomInfoRequest(BaseModel):
+    class_code: str  # 수정하려는 클래스룸의 코드
+    class_name: str
+    description: str
+    max_member: int
+    day: str
+    start_time: str
+    end_time: str
+    is_access: bool
+    is_free: bool
+    link: str

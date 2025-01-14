@@ -242,3 +242,39 @@ def show_edit(class_code : str
 
     pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
     return {"클래스룸정보" : classroom_data, "유저정보" : usertoclass, "승인대기" : [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]}
+
+@router.patch("/edit_classinfo", summary="클래스룸 정보 수정하기")
+def edit_classinfo(data: UpdateClassroomInfoRequest,
+    credentials: HTTPAuthorizationCredentials = Security(security),
+    cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+
+    # 수정하려는 클래스룸이 현재 사용자에 의해 생성된 것인지 확인
+    classroom = cs_db.query(Classroom).filter(
+        Classroom.class_code == data.class_code,
+        Classroom.created_by == user
+    ).first()
+    
+    if not classroom:
+        raise HTTPException(status_code=403, detail="해당 클래스룸을 수정할 권한이 없습니다.")
+
+
+    update_fields = {
+        "class_name": data.class_name,
+        "description": data.description,
+        "max_member": data.max_member,
+        "day": data.day,
+        "start_time": data.start_time,
+        "end_time": data.end_time,
+        "is_access": data.is_access,
+        "is_free": data.is_free,
+        "link": data.link,
+    }
+    for key, value in update_fields.items():
+        if value is not None: 
+            setattr(classroom, key, value)
+
+    cs_db.commit()
+
+    return {"detail": "클래스룸 정보가 성공적으로 수정되었습니다."}
