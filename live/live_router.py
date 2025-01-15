@@ -73,26 +73,19 @@ async def websocket_endpoint(
     role: str,
     credentials: HTTPAuthorizationCredentials = Security(security),
 ):
-    """
-    WebSocket endpoint for handling host and student connections with token-based authentication.
-    """
     try:
         token = credentials.credentials
-        user_id = token_decode(token)  
-
+        user_id = token_decode(token)
         if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token or user not authenticated")
+            raise HTTPException(status_code=401, detail="Invalid token")
 
-        print(f"[INFO] User {user_id} attempting to connect to room {room_id} as {role}")
-
-
+        print(f"[INFO] {user_id} connected as {role} to room {room_id}")
         await manager.connect(room_id, role, user_id, websocket)
 
         while True:
             try:
                 data = await websocket.receive_text()
-                print(f"[INFO] Message in room {room_id} from {role} ({user_id}): {data}")
-
+                print(f"[INFO] {role} ({user_id}) in room {room_id}: {data}")
                 if role == "student":
                     await manager.send_to_host(room_id, f"Student {user_id}: {data}")
                 elif role == "host":
@@ -100,13 +93,19 @@ async def websocket_endpoint(
                         await student_ws.send_text(f"Host: {data}")
 
             except WebSocketDisconnect:
-                print(f"[INFO] User {user_id} disconnected from room {room_id}")
+                print(f"[INFO] {user_id} disconnected from room {room_id}")
                 manager.disconnect(room_id, websocket)
+                break
+            except Exception as e:
+                print(f"[ERROR] Unexpected error while receiving data: {e}")
                 break
 
     except HTTPException as e:
-        print(f"[ERROR] Authentication failed: {e.detail}")
+        print(f"[ERROR] {e.detail}")
         await websocket.close(code=1008)
     except Exception as e:
         print(f"[ERROR] Unexpected error: {e}")
         await websocket.close(code=1011)
+    finally:
+        await websocket.close()
+        print(f"[INFO] WebSocket closed for {user_id}")
