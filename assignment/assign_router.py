@@ -229,10 +229,10 @@ def mentee_return_three(class_id : str,
             al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "undone"})
         else :
             al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "done"})
-            sub_list.append({"assignment_id": assignment.assignment_id, "title" : assignment.title})
+            sub_list.append({"assignment_id": assignment.assignment_id, "title" : assignment.title, "status" : "done"})
         if feedback:
             al_list[-1]["status"] = "feedback_received"
-            fed_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title})
+            fed_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "getFeedback"})
     return {"상위 3개 과제" : al_list[:3],"제출한 상위 3개 과제":sub_list[:3],"상위 3개 피드백":fed_list[:3]}
 
 @router.get("/mentor_return_three", summary= "멘토 기준 상위 3개의 전체 과제/과제 피드백 반환") #테스트 필요
