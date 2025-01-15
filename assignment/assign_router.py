@@ -226,9 +226,9 @@ def mentee_return_three(class_id : str,
         feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
                                                           AssignmentFeedBack.user_id == user).first()
         if submission == None :
-            al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : False})
+            al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "undone"})
         else :
-            al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : True})
+            al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "done"})
             sub_list.append({"assignment_id": assignment.assignment_id, "title" : assignment.title})
         if feedback:
             fed_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title})
