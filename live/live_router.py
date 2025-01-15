@@ -74,29 +74,39 @@ async def websocket_endpoint(
     credentials: HTTPAuthorizationCredentials = Security(security),
 ):
     """
-    WebSocket endpoint for handling host and student connections.
+    WebSocket endpoint for handling host and student connections with token-based authentication.
     """
     try:
-        # Decode the token to extract user_id
         token = credentials.credentials
-        user_id = token_decode(token)
+        user_id = token_decode(token)  
 
-        # Connect the user to the room
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token or user not authenticated")
+
+        print(f"[INFO] User {user_id} attempting to connect to room {room_id} as {role}")
+
+
         await manager.connect(room_id, role, user_id, websocket)
 
         while True:
-            data = await websocket.receive_text()
-            print(f"[INFO] Message in room {room_id} from {role} ({user_id}): {data}")
+            try:
+                data = await websocket.receive_text()
+                print(f"[INFO] Message in room {room_id} from {role} ({user_id}): {data}")
 
-            if role == "student":
-                await manager.send_to_host(room_id, f"Student {user_id}: {data}")
-            elif role == "host":
-                for student_id, student_ws in manager.rooms[room_id]["students"].items():
-                    await student_ws.send_text(f"Host: {data}")
+                if role == "student":
+                    await manager.send_to_host(room_id, f"Student {user_id}: {data}")
+                elif role == "host":
+                    for student_id, student_ws in manager.rooms[room_id]["students"].items():
+                        await student_ws.send_text(f"Host: {data}")
 
-    except WebSocketDisconnect:
-        manager.disconnect(room_id, websocket)
+            except WebSocketDisconnect:
+                print(f"[INFO] User {user_id} disconnected from room {room_id}")
+                manager.disconnect(room_id, websocket)
+                break
+
     except HTTPException as e:
         print(f"[ERROR] Authentication failed: {e.detail}")
+        await websocket.close(code=1008)
     except Exception as e:
         print(f"[ERROR] Unexpected error: {e}")
+        await websocket.close(code=1011)
