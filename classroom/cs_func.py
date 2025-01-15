@@ -40,6 +40,11 @@ def create_code(db: Session):
         new_code = check_code(new_code,db)
     return new_code
 
+#전체 멤버 반환
+def all_member(class_id,db: Session):
+    usertoclass = db.query(UserToClass).filter(UserToClass.class_code == class_id).all()
+    return [utc.user_id for utc in usertoclass]
+
 # Classroom 객체를 변환하는 공통 함수
 def map_classrooms(db_classrooms: List[ClassroomInfo]) -> List[ClassroomInfo]:
     return [

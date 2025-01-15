@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends,Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from assignment.assign_func import *
 from assignment.assign_model import *
 from assignment.assign_schema import *
@@ -92,11 +93,12 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
                 ,"title" : assignment.title,"description" : assignment.description
                 ,"created_by" : assignment.created_by,"testcases" : testcases}
 
-@router.get("/status/maker/all",summary="멘토 기준 전체 과제 정보 반환")
+@router.get("/status/maker/all",summary="멘토 기준 전체 과제 정보 반환") # 테스트 필요
 def mentor_status_all(class_id : str
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb)
-                  ,cs_db : Session=Depends(get_csdb)) :
+                  ,cs_db : Session=Depends(get_csdb)
+                  ,user_db : Session=Depends(get_userdb)) :
     classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     token = credentials.credentials
     user = token_decode(token)
@@ -104,33 +106,57 @@ def mentor_status_all(class_id : str
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     check_created(user,class_id,cs_db)
     classroom_users = classroom.current_member
+    members = all_member(class_id,cs_db)
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
     if assignments == None :
         raise HTTPException(status_code=404, detail="존재하는 과제가 없습니다.")
     result = []
+    
     for assignment in assignments:
+        submission_list = []
+        feedback_list = []
+
         submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id).all()
         if submissions == [] :
             assignment_status = "undone"
         elif len(submissions) == classroom_users :
             assignment_status = "done"
         else :
-            assignment_status = "halfdone"
-        feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id).all()
+            assignment_status = "halfdone" 
 
+        feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id).all()
         if feedbacks == [] :
             feedback_status = "notGaveFeedbackAll"
         elif len(feedbacks) == len(submissions) :
             feedback_status = "gaveFeedbackAll"
         else :
             feedback_status = "gaveFeedbackFew"
+
+
+        for member in members:
+            submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id,
+                                                                  AssignmentSubmission.user_id == member).first()
+            if submission == None :
+                submission_list.append({"user_id" : member,"status" : False})
+            else :
+                submission_list.append({"user_id" : member, "code" : submission.code, "correct" : submission.correct
+                                        ,"detailed_result" : submission.detailed_result})
+            mem_feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
+                                                                  AssignmentFeedBack.user_id == member).first()
+            
+            if mem_feedback == None :
+                feedback_list.append({"user_id" : member, "feedback" : False})
+            else:
+                feedback_list.append({"user_id" : member, "feedback" : mem_feedback.feedback})
+        
         as_data = {
             "assignment_id" : assignment.assignment_id,
             "title" : assignment.title,
+            "description" : assignment.description,
             "assignment_status" : assignment_status
-            ,"feedback_status" : feedback_status
-            ,"feedbacks" : feedbacks
-            ,"submissions" : submissions}
+            ,"feedback_status" : feedback_status  
+            ,"feedbacks" : feedback_list # user_db에서 멘토 id 받아와서 없으면 false 반환
+            ,"submissions" : submission_list}
         result.append(as_data)
     return result
 
@@ -144,7 +170,7 @@ def mentee_status_all(class_id : str
     user = token_decode(token)
     if classroom is None:
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
-    
+    check_member(class_code=class_id,db=cs_db,user_id=user)
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
     if assignments == None :
         return HTTPException(status_code=404, detail="클래스룸 내 과제가 존재하지 않습니다.")
@@ -170,6 +196,99 @@ def mentee_status_all(class_id : str
                         , "feedback" : feedback}
                 result.append(as_data)
     return result
+
+@router.get("/mentee_return_three", summary= "멘티 기준 상위 3개의 전체 과제/내가 제출한 과제/과제 피드백 상태 반환") #테스트 필요
+def mentee_return_three(class_id : str,
+                        credentials : HTTPAuthorizationCredentials = Security(security)
+                  ,as_db : Session=Depends(get_asdb),
+                  cs_db: Session=Depends(get_csdb)):
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    token = credentials.credentials
+    user = token_decode(token)
+    if classroom is None:
+        raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
+    check_member(class_code=class_id,db=cs_db,user_id=user)
+    assignments = as_db.query(Assignment)\
+            .filter(Assignment.class_id == class_id)\
+            .order_by(desc(Assignment.id))\
+            .all()  #전부 역순으로.
+    if assignments == None :
+        return HTTPException(status_code=404, detail="클래스룸 내 과제가 존재하지 않습니다.")
+    result = []
+    al_list = []#전체 과제
+    sub_list = []#제출한 과제
+    fed_list = [] #피드백 받은 과제
+    for assignment in assignments :
+        
+        #전체 과제 : 그냥 붙이기 제출한 과제 : submission에서 찾기 피드백 과제 : 피드백에서 찾기
+        submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id
+                                                            ,AssignmentSubmission.user_id == user).first()
+        feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
+                                                          AssignmentFeedBack.user_id == user).first()
+        if submission == None :
+            al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : False})
+        else :
+            al_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : True})
+            sub_list.append({"assignment_id": assignment.assignment_id, "title" : assignment.title})
+        if feedback:
+            fed_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title})
+    return {"상위 3개 과제" : al_list[:3],"제출한 상위 3개 과제":sub_list[:3],"상위 3개 피드백":fed_list[:3]}
+
+@router.get("/mentor_return_three", summary= "멘토 기준 상위 3개의 전체 과제/과제 피드백 반환") #테스트 필요
+def mentee_return_three(class_id : str,
+                        credentials : HTTPAuthorizationCredentials = Security(security)
+                  ,as_db : Session=Depends(get_asdb),
+                  cs_db: Session=Depends(get_csdb)):
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    token = credentials.credentials
+    user = token_decode(token)
+    check_created(user,class_id,cs_db)
+    if classroom is None:
+        raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
+    
+    al_list = []#완료 상태 표시(전체 과제에서)
+    fed_list = [] #피드백 상태 표시(전체 과제에서)
+    classroom_users = classroom.current_member
+    
+    assignments = as_db.query(Assignment)\
+            .filter(Assignment.class_id == class_id)\
+            .order_by(desc(Assignment.id))\
+            .all()  #전부 역순으로.
+    
+    if assignments == None :
+        return HTTPException(status_code=404, detail="클래스룸 내 과제가 존재하지 않습니다.")
+    
+    for assignment in assignments :
+        
+        submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id).all()
+
+        if submissions == [] :
+            assignment_status = "undone"
+        elif len(submissions) == classroom_users :
+            assignment_status = "done"
+        else :
+            assignment_status = "halfdone"
+        al_list.append({
+            "assignment_id" : assignment.assignment_id,
+            "title" : assignment.title,
+            "assignment_status" : assignment_status
+        })
+        feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id).all()
+
+        if feedbacks == [] :
+            feedback_status = "notGaveFeedbackAll"
+        elif len(feedbacks) == len(submissions) :
+            feedback_status = "gaveFeedbackAll"
+        else :
+            feedback_status = "gaveFeedbackFew"
+        fed_list.append({
+            "assignment_id" : assignment.assignment_id,
+            "title" : assignment.title,
+            "feedback_status" : feedback_status
+        })
+        
+    return {"상위 3개 과제": al_list[:3],"상위 3개 과제 및 피드백 상태": fed_list[:3]}
+
 @router.get("/mysubmission",summary = "내가 제출한 과제 표시")
 def mysubmission(class_id : str
                   ,credentials : HTTPAuthorizationCredentials = Security(security)
@@ -203,6 +322,7 @@ def mysubmission(class_id : str
                         , "feedback" : feedback}
                 result.append(as_data)
     return result
+
 @router.get("/myfeedbacks",summary="받은 피드백 표시")
 def myfeedbacks(class_id : str
                   ,credentials : HTTPAuthorizationCredentials = Security(security)
@@ -228,7 +348,6 @@ def myfeedbacks(class_id : str
     else :
         return result
 
-#멘토 멘티 둘다 전체반환 만들기
 @router.get("/status/maker" , summary="멘토 기준 개별 과제에 대한 status 반환") #
 def mentor_status(assignment_id : str
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
@@ -269,7 +388,7 @@ def mentor_status(assignment_id : str
         return {"assignment_status" : assignment_status
                 ,"feedback_status" : feedback_status
                 ,"feedbacks" : feedbacks
-                ,"submissions" : submissions}
+                ,"submissions" : submissions} #여기서도 submissions/feedbacks false 뜨도록 처리 // 라우터 미사용의 가능성이 있음
 
 
 
@@ -394,7 +513,7 @@ def feedback(data : Feedback
             return {"status" : "새 피드백을 추가했습니다.", "feedback" : data.feedback}
 
 
-@router.post("/test_assignment")
+@router.post("/test_assignment") #테스트 필요
 async def test_assignment(data: Test,
                           credentials: HTTPAuthorizationCredentials = Security(security),
                           as_db: Session = Depends(get_asdb),
@@ -418,7 +537,12 @@ async def test_assignment(data: Test,
     results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases)
 
     # 결과를 AssignmentSubmission 테이블에 저장
-    submission = AssignmentSubmission(
+    old_submission = as_db.query(AssignmentSubmission)\
+        .filter(AssignmentSubmission.assignment_id == data.assignment_id
+                ,AssignmentSubmission.user_id == user).first()
+    if old_submission :
+        as_db.delete(old_submission)
+    submission = AssignmentSubmission( #저장시 원래 데이터 삭제 알고리즘 생성
         user_id=user,
         assignment_id=data.assignment_id,
         code=data.code,
