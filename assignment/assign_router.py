@@ -319,7 +319,7 @@ def mysubmission(class_id : str
                 else :
                     feedback = feedback.feedback
                 as_data = {"assignment_id" : assignment.assignment_id , "title" : assignment.title
-                        , "status" : submission.correct,"code" : submission.code
+                        , "status" : submission.correct,"code" : submission.code, "submitted_at" : submission.submitted_at
                         , "feedback" : feedback}
                 result.append(as_data)
     return result
@@ -395,8 +395,8 @@ def mentor_status(assignment_id : str
             if submission == None :
                 submission_list.append({"user_id" : member,"status" : False})
             else :
-                submission_list.append({"user_id" : member, "code" : submission.code, "correct" : submission.correct
-                                        ,"detailed_result" : submission.detailed_result})
+                submission_list.append({"user_id" : member,"status" : True , "code" : submission.code, "correct" : submission.correct
+                                        ,"detailed_result" : submission.detailed_result, "submitted_at" : submission.submitted_at})
             mem_feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
                                                                   AssignmentFeedBack.user_id == member).first()
             
@@ -459,7 +459,7 @@ def submit(data : Submit
         as_db.delete(submission)
         as_db.refresh(submission) #제출에 코드 넣으니까 json 파싱을 못함
     new_submission = AssignmentSubmission(assignment_id = data.assignment_id,user_id = user
-                                      , code = data.code
+                                      , code = data.code , submitted_at = datetime.utcnow()
                                       , correct = True)
     as_db.add(new_submission)
     as_db.commit()
