@@ -170,7 +170,6 @@ def mentee_status_all(class_id : str
     user = token_decode(token)
     if classroom is None:
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
-    check_member(class_code=class_id,db=cs_db,user_id=user)
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
     if assignments == None :
         return HTTPException(status_code=404, detail="클래스룸 내 과제가 존재하지 않습니다.")
@@ -207,7 +206,6 @@ def mentee_return_three(class_id : str,
     user = token_decode(token)
     if classroom is None:
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
-    check_member(class_code=class_id,db=cs_db,user_id=user)
     assignments = as_db.query(Assignment)\
             .filter(Assignment.class_id == class_id)\
             .order_by(desc(Assignment.id))\

@@ -16,13 +16,13 @@ def check_created(user_id,class_code, db: Session):
     if not classroom_data:
         raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
     
-#해당 클래스룸에 존재하는 유저인지 판별
+#해당 클래스룸에 존재하는 유저인지 판별후 거부하기
 def check_member(user_id,class_code, db: Session):
-    data = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()
-    if class_code in data:
-        raise HTTPException(status_code=409, detail="이미 가입된 스터디방입니다.")
-    else:
-        return
+    data = db.query(UserToClass).filter(UserToClass.user_id == user_id,
+                                        UserToClass.class_code == class_code).first()
+    if data:
+            raise HTTPException(status_code=409, detail="이미 가입된 스터디방입니다.")
+    return True
     
 #랜덤코드 발급시 중복확인
 def check_code(code, db: Session):
