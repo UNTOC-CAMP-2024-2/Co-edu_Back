@@ -36,7 +36,7 @@ async def login_user(user: LoginForm, user_db : Session = Depends(get_userdb)):
     else:
         access_token = create_access_token(data={"sub": user.user_id})
         refresh_token = create_refresh_token(data={"sub": user.user_id})
-    return {"로그인여부" : "성공" , "access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    return {"로그인여부" : "성공" ,"user_id" : user.user_id, "access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 #토큰 verify
 @router.post("/token/verify")

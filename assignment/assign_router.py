@@ -122,7 +122,7 @@ def mentor_status_all(class_id : str
         elif len(submissions) == classroom_users :
             assignment_status = "done"
         else :
-            assignment_status = "halfdone" 
+            assignment_status = "halfDone" 
 
         feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id).all()
         if feedbacks == [] :
@@ -268,7 +268,7 @@ def mentee_return_three(class_id : str,
         elif len(submissions) == classroom_users :
             assignment_status = "done"
         else :
-            assignment_status = "halfdone"
+            assignment_status = "halfDone"
         al_list.append({
             "assignment_id" : assignment.assignment_id,
             "title" : assignment.title,
@@ -375,7 +375,7 @@ def mentor_status(assignment_id : str
         elif len(submissions) == classroom_users :
             assignment_status = "done"
         else :
-            assignment_status = "halfdone"
+            assignment_status = "halfDone"
 
         feedbacks = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment_id).all()
 
