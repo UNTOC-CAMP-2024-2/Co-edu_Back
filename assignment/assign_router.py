@@ -106,7 +106,7 @@ def mentor_status_all(class_id : str
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     check_created(user,class_id,cs_db)
     classroom_users = classroom.current_member
-    members = all_member(class_id,cs_db)
+    members = all_member(class_id,cs_db)[1:]
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
     if assignments == None :
         raise HTTPException(status_code=404, detail="존재하는 과제가 없습니다.")
@@ -367,7 +367,7 @@ def mentor_status(assignment_id : str
         class_id = assignment.class_id
         classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
         classroom_users = classroom.current_member
-        members = all_member(class_id,cs_db)
+        members = all_member(class_id,cs_db)[1:]
         submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id).all()
 
         if submissions == [] :
