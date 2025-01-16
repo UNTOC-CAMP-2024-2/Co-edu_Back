@@ -444,29 +444,6 @@ def info(class_id : str, as_db : Session=Depends(get_asdb),cs_db : Session=Depen
         assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
         return [amt for amt in assignments]
 
-@router.post("/submit") #코드 는 제출만(json파싱된다는가정하에)
-def submit(data : Submit
-           ,credentials : HTTPAuthorizationCredentials = Security(security)
-           ,as_db : Session=Depends(get_asdb)
-           ,cs_db : Session=Depends(get_csdb)):
-    token = credentials.credentials
-    user = token_decode(token)
-    #classroom 내에 있는지 확인
-    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
-    check_member(user,assignment.class_id,cs_db)
-    submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.user_id == user).first()
-    if submission:
-        as_db.delete(submission)
-        as_db.refresh(submission) #제출에 코드 넣으니까 json 파싱을 못함
-    new_submission = AssignmentSubmission(assignment_id = data.assignment_id,user_id = user
-                                      , code = data.code , submitted_at = datetime.utcnow()
-                                      , correct = True)
-    as_db.add(new_submission)
-    as_db.commit()
-    as_db.refresh(new_submission)
-    return "새 코드 제출을 완료했습니다."
-
-
 #해야 되는 과제 라우터 : 이름 반환 + 했는지 안했는지 ~
 @router.get("/tasks")
 def tasks(credentials : HTTPAuthorizationCredentials = Security(security)
@@ -533,6 +510,53 @@ def feedback(data : Feedback
             return {"status" : "새 피드백을 추가했습니다.", "feedback" : data.feedback}
 
 
+@router.post("/submit") #코드 는 제출만(json파싱된다는가정하에)
+def submit(data : Submit
+           ,credentials : HTTPAuthorizationCredentials = Security(security)
+           ,as_db : Session=Depends(get_asdb)
+           ,cs_db : Session=Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    #classroom 내에 있는지 확인
+    assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
+
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
+
+    # 테스트케이스 가져오기
+    testcases = as_db.query(AssignmentTestcase).filter(
+        AssignmentTestcase.assignment_id == data.assignment_id
+    ).all()
+
+    if not testcases:
+        raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
+
+    # 테스트 실행 및 결과 저장
+    results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases)
+
+    # 결과를 AssignmentSubmission 테이블에 저장
+    old_submission = as_db.query(AssignmentSubmission)\
+        .filter(AssignmentSubmission.assignment_id == data.assignment_id
+                ,AssignmentSubmission.user_id == user).first()
+    if old_submission :
+        as_db.delete(old_submission)
+    submission = AssignmentSubmission( 
+        user_id=user,
+        assignment_id=data.assignment_id,
+        code=data.code,
+        correct=all(result["result"] == "Pass" for result in results),
+        detailed_result=detailed_result,
+    )
+    as_db.add(submission)
+    as_db.commit()
+
+    return {
+        "status": "제출 완료."
+    }
+
+
+
+
 @router.post("/test_assignment") #테스트 필요
 async def test_assignment(data: Test,
                           credentials: HTTPAuthorizationCredentials = Security(security),
@@ -557,20 +581,6 @@ async def test_assignment(data: Test,
     results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases)
 
     # 결과를 AssignmentSubmission 테이블에 저장
-    old_submission = as_db.query(AssignmentSubmission)\
-        .filter(AssignmentSubmission.assignment_id == data.assignment_id
-                ,AssignmentSubmission.user_id == user).first()
-    if old_submission :
-        as_db.delete(old_submission)
-    submission = AssignmentSubmission( #저장시 원래 데이터 삭제 알고리즘 생성
-        user_id=user,
-        assignment_id=data.assignment_id,
-        code=data.code,
-        correct=all(result["result"] == "Pass" for result in results),
-        detailed_result=detailed_result,
-    )
-    as_db.add(submission)
-    as_db.commit()
 
     return {
         "status": "테스트가 완료되었습니다.",

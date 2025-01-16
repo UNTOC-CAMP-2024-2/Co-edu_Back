@@ -21,6 +21,7 @@ class AssignmentModify(BaseModel):
 class Submit(BaseModel):
     assignment_id : str
     code : str
+    language : str
 
 class Feedback(BaseModel):
     assignment_id : str
