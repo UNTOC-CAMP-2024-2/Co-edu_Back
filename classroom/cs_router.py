@@ -94,7 +94,7 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
         cs_db.add(usercs_data)
         cs_db.commit()
         cs_db.refresh(classroom_data)
-        return True  #자유가입일시 바로입장
+        return True, classroom_data  #자유가입일시 바로입장
     else:
         raise HTTPException(status_code=400, detail="이미 인원이 가득찬 클래스룸입니다.")
 
