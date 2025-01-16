@@ -429,7 +429,7 @@ def mentee_status(assignment_id : str
         feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment_id,
                                                           AssignmentFeedBack.user_id == user).first()
         return {"assignment_id" : assignment_id, "user_id" : user
-                , "status" : submission.correct,"code" : submission.code
+                , "status" : submission.correct,"code" : submission.code, "submitted_at" : submission.submitted_at
                 , "feedback" : feedback}
 
 
@@ -544,6 +544,7 @@ def submit(data : Submit
         code=data.code,
         correct=all(result["result"] == "Pass" for result in results),
         detailed_result=detailed_result,
+        submitted_at=returnnow()
     )
     as_db.add(submission)
     as_db.commit()

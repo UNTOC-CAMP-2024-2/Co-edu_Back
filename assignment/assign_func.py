@@ -1,7 +1,12 @@
 from sqlalchemy.orm import Session
 from assignment.assign_model import *
 from fastapi import HTTPException
+from datetime import datetime
 
+def returnnow():
+    date = str(datetime.now().date())
+    date = date.replace('-','. ')+". "
+    return date
 #랜덤코드 발급시 중복확인
 def check_id(id, db: Session):
     data = db.query(Assignment).filter(Assignment.assignment_id == id).first()

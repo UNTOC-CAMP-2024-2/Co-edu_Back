@@ -21,7 +21,7 @@ class AssignmentSubmission(as_Base):
     code = Column(TEXT, nullable=False)
     correct = Column(Boolean)
     detailed_result = Column(JSON, nullable=True) 
-    submitted_at = Column(DateTime)
+    submitted_at = Column(String(20))
 
 class Assignment(as_Base):
     __tablename__ = "Assignment"
