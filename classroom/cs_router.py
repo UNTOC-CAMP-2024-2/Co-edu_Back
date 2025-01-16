@@ -64,7 +64,7 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
     
     if not classroom_data:
         raise HTTPException(status_code=404, detail="존재하지 않는 클래스룸입니다.")
-    
+    a = check_member(user, data.class_code, cs_db)
     # 무료 여부 확인
     if not classroom_data.is_free:
         # 이미 승인 대기 중인지 확인
@@ -87,7 +87,6 @@ def join_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredential
         return False #승인대기로 넘어감을 의미
     
 
-    check_member(user, data.class_code, cs_db)
     usercs_data = UserToClass(user_id=user, class_code=data.class_code)
     if classroom_data.max_member > classroom_data.current_member:
         classroom_data.current_member += 1

@@ -20,9 +20,10 @@ def check_created(user_id,class_code, db: Session):
 def check_member(user_id,class_code, db: Session):
     datas = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()
     for data in datas:
+        print(data)
         if class_code == data.class_code:
             raise HTTPException(status_code=409, detail="이미 가입된 스터디방입니다.")
-    return
+    return True
     
 #랜덤코드 발급시 중복확인
 def check_code(code, db: Session):
