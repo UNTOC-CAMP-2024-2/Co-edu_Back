@@ -367,7 +367,7 @@ def mentor_status(assignment_id : str
         class_id = assignment.class_id
         classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
         classroom_users = classroom.current_member
-        
+        members = all_member(class_id,cs_db)
         submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id).all()
 
         if submissions == [] :
@@ -385,11 +385,30 @@ def mentor_status(assignment_id : str
             feedback_status = "gaveFeedbackAll"
         else :
             feedback_status = "gaveFeedbackFew"
-        
+
+        submission_list = []
+        feedback_list = []
+
+        for member in members:
+            submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id,
+                                                                  AssignmentSubmission.user_id == member).first()
+            if submission == None :
+                submission_list.append({"user_id" : member,"status" : False})
+            else :
+                submission_list.append({"user_id" : member, "code" : submission.code, "correct" : submission.correct
+                                        ,"detailed_result" : submission.detailed_result})
+            mem_feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
+                                                                  AssignmentFeedBack.user_id == member).first()
+            
+            if mem_feedback == None :
+                feedback_list.append({"user_id" : member, "feedback" : False})
+            else:
+                feedback_list.append({"user_id" : member, "feedback" : mem_feedback.feedback})
+
         return {"assignment_status" : assignment_status
                 ,"feedback_status" : feedback_status
-                ,"feedbacks" : feedbacks
-                ,"submissions" : submissions} #여기서도 submissions/feedbacks false 뜨도록 처리 // 라우터 미사용의 가능성이 있음
+                ,"feedbacks" : feedback_list
+                ,"submissions" : submission_list} #여기서도 submissions/feedbacks false 뜨도록 처리 // 라우터 미사용의 가능성이 있음
 
 
 
