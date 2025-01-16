@@ -18,11 +18,11 @@ def check_created(user_id,class_code, db: Session):
     
 #해당 클래스룸에 존재하는 유저인지 판별
 def check_member(user_id,class_code, db: Session):
-    data = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()
-    if class_code in data:
-        raise HTTPException(status_code=409, detail="이미 가입된 스터디방입니다.")
-    else:
-        return
+    datas = db.query(UserToClass).filter(UserToClass.user_id == user_id).all()
+    for data in datas:
+        if class_code == data.class_code:
+            raise HTTPException(status_code=409, detail="이미 가입된 스터디방입니다.")
+    return
     
 #랜덤코드 발급시 중복확인
 def check_code(code, db: Session):
