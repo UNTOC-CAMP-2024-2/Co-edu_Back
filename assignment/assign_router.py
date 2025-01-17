@@ -638,6 +638,6 @@ def get_code_data(assignment_id : str,
     user = token_decode(token)
     assignment = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id, AssignmentSubmission.user_id == user).first()
     if assignment:
-        return assignment.code, assignment.language
+        return {"code" : assignment.code, "language" : assignment.language}
     else:
         return "" #제출내역없으면 아무것도 없이 리턴
