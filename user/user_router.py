@@ -17,6 +17,8 @@ router = APIRouter(
 
 @router.post("/signin")
 async def signin_user(user: NewUserForm, user_db : Session = Depends(get_userdb)):
+    if user.user_id == None or user.password == None or user.name == None or user.email == None:
+        raise HTTPException(status_code=400, detail="로그인정보의 공란을 채워주세요.")   
     get_duplicate(user, user_db)
     hashed_password = get_password_hash(user.password)
     db_user = User(user_id=user.user_id, password=hashed_password, name=user.name,\
