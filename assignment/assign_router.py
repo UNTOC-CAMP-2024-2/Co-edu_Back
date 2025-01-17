@@ -544,7 +544,8 @@ def submit(data : Submit
         code=data.code,
         correct=all(result["result"] == "Pass" for result in results),
         detailed_result=detailed_result,
-        submitted_at=returnnow()
+        submitted_at=returnnow(),
+        language=data.language
     )
     as_db.add(submission)
     as_db.commit()
