@@ -105,7 +105,7 @@ def mentor_status_all(class_id : str
     if classroom is None:
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     check_created(user,class_id,cs_db)
-    classroom_users = classroom.current_member
+    classroom_users = classroom.current_member-1
     members = all_member(class_id,cs_db)[1:]
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
     if assignments == None :
@@ -247,7 +247,7 @@ def mentee_return_three(class_id : str,
     
     al_list = []#완료 상태 표시(전체 과제에서)
     fed_list = [] #피드백 상태 표시(전체 과제에서)
-    classroom_users = classroom.current_member
+    classroom_users = classroom.current_member-1
     
     assignments = as_db.query(Assignment)\
             .filter(Assignment.class_id == class_id)\
@@ -364,7 +364,7 @@ def mentor_status(assignment_id : str
         
         class_id = assignment.class_id
         classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
-        classroom_users = classroom.current_member
+        classroom_users = classroom.current_member-1
         members = all_member(class_id,cs_db)[1:]
         submissions = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id).all()
 
