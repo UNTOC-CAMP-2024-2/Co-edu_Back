@@ -22,6 +22,7 @@ class AssignmentSubmission(as_Base):
     correct = Column(Boolean)
     detailed_result = Column(JSON, nullable=True) 
     submitted_at = Column(String(20))
+    language = Column(String(255), nullable=False)
 
 class Assignment(as_Base):
     __tablename__ = "Assignment"
