@@ -627,3 +627,16 @@ def execute_tests_and_get_results(language,code, testcases):
     detailed_result = results
 
     return results, detailed_result, total_score
+
+@router.get("/code_data/{assignment_id}", summary="과제별 자기 코드 불러오기")
+def get_code_data(assignment_id : str,
+                  credentials: HTTPAuthorizationCredentials = Security(security),
+                  as_db: Session = Depends(get_asdb),
+                  cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    assignment = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id, AssignmentSubmission.user_id == user).first()
+    if assignment:
+        return assignment.code
+    else:
+        return "" #제출내역없으면 아무것도 없이 리턴
