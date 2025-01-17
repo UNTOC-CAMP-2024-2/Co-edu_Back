@@ -119,6 +119,45 @@ def leave_classroom(data: ClassroomCode, credentials: HTTPAuthorizationCredentia
     else:
         raise HTTPException(status_code=404, detail="해당 클래스룸을 찾을 수 없거나 해당 클래스룸에서 유저를 찾을 수 없습니다.")
         
+
+@router.delete("/kick_user", summary="유저 강퇴하기")
+def kick_user(data: KickUserForm,
+              credentials: HTTPAuthorizationCredentials = Security(security),
+              cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+
+    # 현재 유저가 해당 클래스룸의 스터디장인지 확인
+    classroom_data = cs_db.query(Classroom).filter(
+        Classroom.class_code == data.class_code,
+        Classroom.created_by == user
+    ).first()
+    
+    if not classroom_data:
+        raise HTTPException(status_code=403, detail="해당 클래스룸의 스터디장이 아닙니다.")
+    
+    # 자기 자신을 강퇴하려는 경우 확인
+    if data.kick_user == user:
+        raise HTTPException(status_code=400, detail="스터디장은 자기 자신을 강퇴할 수 없습니다.")
+
+    # 강퇴하려는 유저가 해당 클래스룸에 속해 있는지 확인
+    user_to_class = cs_db.query(UserToClass).filter(
+        UserToClass.user_id == data.kick_user,
+        UserToClass.class_code == data.class_code
+    ).first()
+    
+    if not user_to_class:
+        raise HTTPException(status_code=404, detail="강퇴하려는 유저가 해당 클래스룸에 속해 있지 않습니다.")
+
+    # 강퇴 처리
+    cs_db.delete(user_to_class)
+
+    # 클래스룸의 현재 인원 수 감소
+    classroom_data.current_member -= 1
+
+    cs_db.commit()  # 변경사항 반영
+
+    return {"detail": f"유저 {data.kick_user}가 성공적으로 강퇴되었습니다."}
     
 @router.get("/myclassroom", response_model=List[ClassroomInfo], summary="내가 속한 클래스룸 확인하기")
 def show_myclassroom(credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
