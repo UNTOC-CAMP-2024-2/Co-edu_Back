@@ -119,4 +119,4 @@ def email_send(email, code):
             smtp.sendmail(EMAIL, email, msg.as_string())
 
     except Exception as e:
-        print(f"이메일 전송 중 오류가 발생했습니다: {e}")
+        raise HTTPException(status_code= 400, detail="이메일전송에 실패하였습니다. 정상적인 이메일인지 확인해주세요.")
