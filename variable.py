@@ -19,3 +19,6 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("REFRESH_TOKEN_EXPIRE_DAYS"))
+
+SSL_CERTFILE = os.environ.get("SSL_CERTFILE")
+SSL_KEYFILE = os.environ.get("SSL_KEYFILE")

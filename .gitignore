@@ -4,3 +4,6 @@ test.py
 /__pycache__
 /classroom/__pycache__
 /user/__pycache__
+/assignment/__pycache__
+/live/__pycache__
+app.log

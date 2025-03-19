@@ -1,0 +1,8 @@
+fastapi==0.112.2
+mysql-connector-python==9.1.0
+python-dotenv==1.0.1
+sqlalchemy==2.0.34
+uvicorn==0.20.0
+passlib==1.7.4
+PyJWT==2.10.1
+pydantic==2.10.2
