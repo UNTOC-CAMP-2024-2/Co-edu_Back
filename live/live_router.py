@@ -4,7 +4,7 @@ from typing import Dict, Optional
 import json
 from assignment.restricted_execution import execute_code
 from user.user_func import token_decode
-from live_schema import Run
+from live.live_schema import Run
 
 security = HTTPBearer()
 router = APIRouter(
