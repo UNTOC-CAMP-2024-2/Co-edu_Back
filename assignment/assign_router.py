@@ -602,20 +602,20 @@ def execute_tests_and_get_results(language, code, testcases):
         expected_output = testcase.expected_output
 
         # 코드 실행 (stdout, stderr, 실행 시간)
-        output, error, exec_time_ms = execute_code(language, code, input_data)
+        output, error, exec_time_s = execute_code(language, code, input_data)
 
         if error:
             results.append({
                 "case_number": num + 1,
                 "result": "Error",
                 "details": str(error),
-                "execution_time_ms": exec_time_ms
+                "execution_time_s": exec_time_s
             })
         elif output.strip() == expected_output.strip():
             results.append({
                 "case_number": num + 1,
                 "result": "Pass",
-                "execution_time_ms": exec_time_ms
+                "execution_time_s": exec_time_s
             })
             passed_tests += 1
         else:
@@ -623,7 +623,7 @@ def execute_tests_and_get_results(language, code, testcases):
                 "case_number": num + 1,
                 "result": "Fail",
                 "details": f"Expected {expected_output}, but got {output}",
-                "execution_time_ms": exec_time_ms
+                "execution_time_s": exec_time_s
             })
 
     # 점수 계산
