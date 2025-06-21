@@ -590,37 +590,40 @@ async def test_assignment(data: Test,
     }
 
 
-def execute_tests_and_get_results(language,code, testcases):
+def execute_tests_and_get_results(language, code, testcases):
     from assignment.restricted_execution import execute_code
 
     results = []
     total_tests = len(testcases)
     passed_tests = 0
 
-    for num,testcase in enumerate(testcases):
+    for num, testcase in enumerate(testcases):
         input_data = testcase.input
         expected_output = testcase.expected_output
 
-        # 코드 실행
-        output, error = execute_code(language, code, input_data)
+        # 코드 실행 (stdout, stderr, 실행 시간)
+        output, error, exec_time_ms = execute_code(language, code, input_data)
 
         if error:
             results.append({
-                "case_number": num+1,
+                "case_number": num + 1,
                 "result": "Error",
-                "details": str(error)
+                "details": str(error),
+                "execution_time_ms": exec_time_ms
             })
         elif output.strip() == expected_output.strip():
             results.append({
-                "case_number": num+1,
-                "result": "Pass"
+                "case_number": num + 1,
+                "result": "Pass",
+                "execution_time_ms": exec_time_ms
             })
             passed_tests += 1
         else:
             results.append({
-                "case_number": num+1,
+                "case_number": num + 1,
                 "result": "Fail",
-                "details": f"Expected {expected_output}, but got {output}"
+                "details": f"Expected {expected_output}, but got {output}",
+                "execution_time_ms": exec_time_ms
             })
 
     # 점수 계산
@@ -628,6 +631,7 @@ def execute_tests_and_get_results(language,code, testcases):
     detailed_result = results
 
     return results, detailed_result, total_score
+
 
 @router.get("/code_data/{assignment_id}", summary="과제별 자기 코드 불러오기")
 def get_code_data(assignment_id : str,

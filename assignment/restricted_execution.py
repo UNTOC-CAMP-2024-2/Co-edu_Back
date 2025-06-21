@@ -4,7 +4,7 @@ import tempfile
 import os
 import re
 import shutil 
-
+import time
 def validate_code(code: str):
     try:
         tree = ast.parse(code)
@@ -65,13 +65,10 @@ def get_file_extension(language: str) -> str:
 
 
 def execute_code(language: str, code: str, input_data: str):
-    """
-    코드를 실행하는 함수로, 자바의 파일명 규칙을 처리합니다.
-    """
     if language == "python":
         is_valid, error_message = validate_code(code)
         if not is_valid:
-            return None, f"Code validation failed: {error_message}"
+            return None, f"Code validation failed: {error_message}", 0.0
 
     try:
         if language == "java":
@@ -92,6 +89,9 @@ def execute_code(language: str, code: str, input_data: str):
         else:
             command = get_execution_command(language, code_file_path)
 
+        # 실행 시간 측정 시작
+        start_time = time.time()
+
         process = subprocess.run(
             " ".join(command),
             input=input_data,
@@ -100,16 +100,22 @@ def execute_code(language: str, code: str, input_data: str):
             capture_output=True,
             timeout=3
         )
-        return process.stdout.strip(), process.stderr.strip()
+
+        # 실행 시간 측정 종료
+        end_time = time.time()
+        execution_time = round(end_time - start_time, 3)  # 소수점 6자리까지 반환
+
+        return process.stdout.strip(), process.stderr.strip(), execution_time
+
     except subprocess.TimeoutExpired:
-        return None, "Execution timed out."
+        return None, "Execution timed out.", 3.0
     except ValueError as e:
-        return None, str(e)
+        return None, str(e), 0.0
     except Exception as e:
-        return None, str(e)
+        return None, str(e), 0.0
     finally:
         # 디렉토리 및 파일 삭제
         if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)  # 디렉토리와 내부 파일을 모두 삭제
-        if os.path.exists("a.out"):  # C, C++ 실행 파일 삭제
+            shutil.rmtree(temp_dir)
+        if os.path.exists("a.out"):
             os.remove("a.out")
