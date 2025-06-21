@@ -127,9 +127,6 @@ async def test_assignment(data: Run,
     token = credentials.credentials
     user = token_decode(token)
 
-    if not data.input:
-        raise HTTPException(status_code=404, detail="테스트케이스가 존재하지 않습니다.")
-
     # 테스트 실행 및 결과 저장
     output, error, exec_time_s = execute_code(data.language, data.code, data.input)
 
