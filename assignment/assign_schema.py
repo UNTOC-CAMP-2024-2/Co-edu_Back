@@ -7,10 +7,10 @@ class TestCase(BaseModel):
 
 class AssignmentData(BaseModel):
     class_id : str
+    category_id: int
     title : str
     description : str
     testcase : list[TestCase]
-#deadline 삭제 
 
 class AssignmentModify(BaseModel):
     assignment_id : str
@@ -32,3 +32,8 @@ class Test(BaseModel):
     assignment_id : str
     code : str
     language : str
+
+class Category(BaseModel):
+    class_id: str
+    name: str
+    description: str | None = None

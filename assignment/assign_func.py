@@ -55,3 +55,28 @@ def delete_assignment(db: Session, assignment):
     ).delete(synchronize_session=False)
     db.delete(assignment)
     db.commit()
+
+def create_new_category(data,cs_db:Session):
+
+    existing = cs_db.query(AssignmentCategory).filter_by(name=data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="같은 이름의 카테고리가 이미 존재합니다.")
+    
+    new_category = AssignmentCategory(
+        name=data.name,
+        description=data.description,
+        class_id = data.class_id
+    )
+    cs_db.add(new_category)
+    cs_db.commit()
+    cs_db.refresh(new_category)
+
+    return {
+        "message": "카테고리가 성공적으로 생성되었습니다.",
+        "category": {
+            "id": new_category.id,
+            "class_id": new_category.class_id,
+            "name": new_category.name,
+            "description": new_category.description
+        }
+    }

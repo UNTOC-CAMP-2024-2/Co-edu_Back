@@ -30,13 +30,17 @@ def create_assign(data : AssignmentData
     new_id = None
     #classid 유무확인
     check_created(user,data.class_id,cs_db)
+    category = cs_db.query(AssignmentCategory).filter_by(id=data.category_id).first()
+    if category is None:
+        raise HTTPException(status_code=404, detail="해당 카테고리가 존재하지 않습니다.")
+    
     while new_id == None:
         new_id = str(random.randint(10000,99999))
         new_id = check_id(new_id,as_db)
 
     new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
                            ,title = data.title, description = data.description
-                           ,created_by = user)
+                           ,created_by = user, category_id=data.category_id )
     #assignment 기본 정보 저장
     #testcase 추가 필요
     as_db.add(new_assign)
@@ -645,3 +649,13 @@ def get_code_data(assignment_id : str,
         return {"code" : assignment.code, "language" : assignment.language}
     else:
         return "" #제출내역없으면 아무것도 없이 리턴
+    
+
+@router.post("/category",summary="카테고리 생성")
+def create_category(data: Category, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+    check_created(user,data.class_id,cs_db)
+    create_new_category(data,cs_db)
+
+
