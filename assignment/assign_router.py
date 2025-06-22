@@ -60,6 +60,7 @@ def modify_assign(data : AssignmentModify ,credentials: HTTPAuthorizationCredent
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
     assignment.description = data.description
     assignment.title = data.title
+    assignment.category_id = data.category_id
     as_db.commit()
     modify_testcase(data.testcase,data.assignment_id,as_db)
     as_db.commit()

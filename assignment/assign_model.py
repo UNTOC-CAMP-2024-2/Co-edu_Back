@@ -27,9 +27,9 @@ class AssignmentSubmission(as_Base):
 class AssignmentCategory(as_Base):
     __tablename__ = "AssignmentCategory"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, unique=True)
+    name = Column(String(100), nullable=False)
     description = Column(TEXT, nullable=True)
-    class_id = Column(String(10), unique=True, nullable=False, index=True)
+    class_id = Column(String(10), nullable=False, index=True)
     assignments = relationship("Assignment", back_populates="category")
 
 

@@ -16,6 +16,7 @@ class AssignmentModify(BaseModel):
     assignment_id : str
     description : str
     title : str
+    category_id: int 
     testcase : list[TestCase]
 
 class Submit(BaseModel):
