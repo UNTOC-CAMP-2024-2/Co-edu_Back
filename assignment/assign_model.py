@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON
+from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey
 from assignment.assign_db import as_Base
 from assignment.assign_schema import *
-
+from sqlalchemy.orm import relationship
 """""
 멘티 페이지에서의 Assignment컴포넌트의 type
 전체 과제 -> done / undone
@@ -24,14 +24,27 @@ class AssignmentSubmission(as_Base):
     submitted_at = Column(String(20))
     language = Column(String(255), nullable=False)
 
+class AssignmentCategory(as_Base):
+    __tablename__ = "AssignmentCategory"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(TEXT, nullable=True)
+    class_id = Column(String(10), unique=True, nullable=False, index=True)
+    assignments = relationship("Assignment", back_populates="category")
+
+
 class Assignment(as_Base):
     __tablename__ = "Assignment"
     id = Column(Integer, primary_key=True, index=True)
-    assignment_id = Column(String(10),unique=True,nullable=False,index=True)
-    class_id = Column(String(10),unique=True,nullable=False,index=True)
+    assignment_id = Column(String(10), unique=True, nullable=False, index=True)
+    class_id = Column(String(10), unique=True, nullable=False, index=True)
     title = Column(String(255), nullable=False, index=True)
     description = Column(TEXT, nullable=False, index=True)
-    created_by = Column(String(20),nullable=False, index=True)
+    created_by = Column(String(20), nullable=False, index=True)
+
+    category_id = Column(Integer, ForeignKey("AssignmentCategory.id"), nullable=True)
+
+    category = relationship("AssignmentCategory", back_populates="assignments")
 
 class AssignmentTestcase(as_Base):
     __tablename__ = "Testcase"
@@ -46,3 +59,4 @@ class AssignmentFeedBack(as_Base):
     assignment_id = Column(String(10),nullable=False,index=True)
     user_id = Column(String(20), nullable=False, index=True)
     feedback = Column(TEXT)
+
