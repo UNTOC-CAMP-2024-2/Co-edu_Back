@@ -662,12 +662,12 @@ def create_category(data: Category, credentials: HTTPAuthorizationCredentials = 
 @router.get("/categories", summary="클래스룸 내 카테고리 목록 조회")
 def get_categories(class_id: str,
                    credentials: HTTPAuthorizationCredentials = Security(security),
-                   as_db: Session = Depends(get_asdb)):
+                   as_db: Session = Depends(get_asdb),cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
 
     # 클래스 존재 여부 확인
-    classroom = as_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     if not classroom:
         raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
 
@@ -685,7 +685,7 @@ def mentee_status_by_category(category_id: int,
     user = token_decode(token)
 
     # 카테고리 유효성 검사
-    category = cs_db.query(AssignmentCategory).filter(AssignmentCategory.id == category_id).first()
+    category = as_db.query(AssignmentCategory).filter(AssignmentCategory.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="해당 카테고리가 존재하지 않습니다.")
 
