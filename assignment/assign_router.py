@@ -662,7 +662,7 @@ def create_category(data: Category, credentials: HTTPAuthorizationCredentials = 
 @router.get("/categories", summary="클래스룸 내 카테고리 목록 조회")
 def get_categories(class_id: str,
                    credentials: HTTPAuthorizationCredentials = Security(security),
-                   as_db: Session = Depends(get_csdb)):
+                   as_db: Session = Depends(get_asdb)):
     token = credentials.credentials
     user = token_decode(token)
 
