@@ -652,26 +652,83 @@ def get_code_data(assignment_id : str,
     
 
 @router.post("/category",summary="카테고리 생성")
-def create_category(data: Category, credentials: HTTPAuthorizationCredentials = Security(security), cs_db: Session = Depends(get_csdb)):
+def create_category(data: Category, credentials: HTTPAuthorizationCredentials = Security(security), as_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_created(user,data.class_id,cs_db)
-    create_new_category(data,cs_db)
+    check_created(user,data.class_id,as_db)
+    create_new_category(data,as_db)
 
 
 @router.get("/categories", summary="클래스룸 내 카테고리 목록 조회")
 def get_categories(class_id: str,
                    credentials: HTTPAuthorizationCredentials = Security(security),
-                   cs_db: Session = Depends(get_csdb)):
+                   as_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
 
     # 클래스 존재 여부 확인
-    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    classroom = as_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     if not classroom:
         raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
 
     # 카테고리 목록 조회
-    categories = cs_db.query(AssignmentCategory).filter(AssignmentCategory.class_id == class_id).all()
+    categories = as_db.query(AssignmentCategory).filter(AssignmentCategory.class_id == class_id).all()
 
     return [{"id": c.id, "name": c.name, "description": c.description} for c in categories]
+
+@router.get("/status/mentee/category/{category_id}", summary="멘티 기준 카테고리별 과제 정보 반환")
+def mentee_status_by_category(category_id: int,
+                              credentials: HTTPAuthorizationCredentials = Security(security),
+                              as_db: Session = Depends(get_asdb),
+                              cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+
+    # 카테고리 유효성 검사
+    category = cs_db.query(AssignmentCategory).filter(AssignmentCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="해당 카테고리가 존재하지 않습니다.")
+
+    # 클래스 권한 검사 (멘티가 속한 클래스인지)
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == category.class_id).first()
+    if not classroom:
+        raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
+
+    # 과제 조회
+    assignments = as_db.query(Assignment).filter(Assignment.category_id == category_id).all()
+    if not assignments:
+        raise HTTPException(status_code=404, detail="해당 카테고리에 속한 과제가 존재하지 않습니다.")
+
+    result = []
+
+    for assignment in assignments:
+        submission = as_db.query(AssignmentSubmission).filter(
+            AssignmentSubmission.assignment_id == assignment.assignment_id,
+            AssignmentSubmission.user_id == user
+        ).first()
+
+        feedback = as_db.query(AssignmentFeedBack).filter(
+            AssignmentFeedBack.assignment_id == assignment.assignment_id,
+            AssignmentFeedBack.user_id == user
+        ).first()
+
+        if submission is None:
+            as_data = {
+                "assignment_id": assignment.assignment_id,
+                "title": assignment.title,
+                "description": assignment.description,
+                "status": False
+            }
+        else:
+            as_data = {
+                "assignment_id": assignment.assignment_id,
+                "title": assignment.title,
+                "description": assignment.description,
+                "status": submission.correct,
+                "code": submission.code,
+                "feedback": bool(feedback)
+            }
+
+        result.append(as_data)
+
+    return result
