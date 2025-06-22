@@ -652,10 +652,10 @@ def get_code_data(assignment_id : str,
     
 
 @router.post("/category",summary="카테고리 생성")
-def create_category(data: Category, credentials: HTTPAuthorizationCredentials = Security(security), as_db: Session = Depends(get_asdb)):
+def create_category(data: Category, credentials: HTTPAuthorizationCredentials = Security(security), as_db: Session = Depends(get_asdb),cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    check_created(user,data.class_id,as_db)
+    check_created(user,data.class_id,cs_db)
     create_new_category(data,as_db)
 
 
