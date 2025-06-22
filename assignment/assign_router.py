@@ -88,7 +88,7 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         testcases = (as_db.query(AssignmentTestcase)
-                    .filter(AssignmentTestcase.assignment_id == assignment_id).all())
+                    .filter(AssignmentTestcase.assignment_id == assignment_id).limit(3).all())
         return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
                 ,"created_by" : assignment.created_by,"testcases" : testcases}
