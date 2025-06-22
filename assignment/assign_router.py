@@ -659,3 +659,19 @@ def create_category(data: Category, credentials: HTTPAuthorizationCredentials = 
     create_new_category(data,cs_db)
 
 
+@router.get("/categories", summary="클래스룸 내 카테고리 목록 조회")
+def get_categories(class_id: str,
+                   credentials: HTTPAuthorizationCredentials = Security(security),
+                   cs_db: Session = Depends(get_csdb)):
+    token = credentials.credentials
+    user = token_decode(token)
+
+    # 클래스 존재 여부 확인
+    classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
+    if not classroom:
+        raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
+
+    # 카테고리 목록 조회
+    categories = cs_db.query(AssignmentCategory).filter(AssignmentCategory.class_id == class_id).all()
+
+    return [{"id": c.id, "name": c.name, "description": c.description} for c in categories]
