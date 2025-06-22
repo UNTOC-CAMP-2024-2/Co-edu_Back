@@ -30,7 +30,7 @@ def create_assign(data : AssignmentData
     new_id = None
     #classid 유무확인
     check_created(user,data.class_id,cs_db)
-    category = cs_db.query(AssignmentCategory).filter_by(id=data.category_id).first()
+    category = as_db.query(AssignmentCategory).filter_by(id=data.category_id).first()
     if category is None:
         raise HTTPException(status_code=404, detail="해당 카테고리가 존재하지 않습니다.")
     
