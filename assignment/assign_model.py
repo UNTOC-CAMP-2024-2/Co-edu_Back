@@ -39,7 +39,7 @@ class Assignment(as_Base):
     assignment_id = Column(String(10), unique=True, nullable=False, index=True)
     class_id = Column(String(10), nullable=False, index=True)
     title = Column(String(30), nullable=False, index=True)
-    description = Column(String(3000), nullable=False, index=True)
+    description = Column(String(2000), nullable=False)
     created_by = Column(String(20), nullable=False, index=True)
 
     category_id = Column(Integer, ForeignKey("AssignmentCategory.id"), nullable=True)
