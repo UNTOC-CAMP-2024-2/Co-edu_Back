@@ -14,6 +14,9 @@ from user.user_func import *
 from user.user_db import get_userdb
 from sqlalchemy import and_
 from typing import List
+
+from assignment.assign_db import get_asdb
+from assignment.assign_model import AssignmentCategory
 security = HTTPBearer()
 
 
@@ -240,7 +243,8 @@ def deny_member(data: ApprovalRequest, credentials: HTTPAuthorizationCredentials
 @router.get("/class_info", summary="클래스룸 정보확인")
 def class_info(class_code : str
                , credentials: HTTPAuthorizationCredentials = Security(security)
-               , cs_db: Session = Depends(get_csdb)):
+               , cs_db: Session = Depends(get_csdb)
+               , as_db: Session = Depends(get_asdb)):
     token = credentials.credentials
     user = token_decode(token)
     classroom_data = cs_db.query(Classroom).filter(
@@ -251,11 +255,13 @@ def class_info(class_code : str
     usertoclass = cs_db.query(UserToClass).filter(
         and_(UserToClass.user_id == user, UserToClass.class_code == class_code)
     ).first()
+
+    categories = as_db.query(AssignmentCategory).filter(AssignmentCategory.class_id == class_code).all()
     if usertoclass:
         if classroom_data.created_by != user:
-            return classroom_data , False
+            return classroom_data ,categories, False
         else:
-            return classroom_data , True
+            return classroom_data , categories, True
     else:
         raise HTTPException(status_code=404, detail="해당 크래스룸에 들어가있지 않습니다.")
 
