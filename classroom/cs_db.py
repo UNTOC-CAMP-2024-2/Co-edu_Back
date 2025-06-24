@@ -6,7 +6,7 @@ from variable import *
 
 SQLALCHEMY_DATABASE_URL_CS = f"mysql+mysqlconnector://root:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{CS_DB_NAME}?charset=utf8mb4&collation=utf8mb4_unicode_ci"
 
-cs_engine = create_engine(SQLALCHEMY_DATABASE_URL_CS)
+cs_engine = create_engine(SQLALCHEMY_DATABASE_URL_CS, pool_recycle=3600,pool_pre_ping=True)
 
 cs_SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cs_engine)
 
