@@ -32,20 +32,7 @@ def get_java_class_name(code: str) -> str:
     raise ValueError("No public class found in Java code.")
 
 
-def get_execution_command(language: str, code_file: str, class_name: str = None) -> list:
-    """
-    언어에 맞는 실행 명령을 반환합니다. 자바의 경우 class_name과 경로를 포함합니다.
-    """
-    commands = {
-        "python": ["python", code_file],
-        "javascript": ["node", code_file],
-        "java": ["javac", code_file, "&&", "java", "-cp", os.path.dirname(code_file), class_name],
-        "c": ["gcc", code_file, "-o", "a.out", "&&", "./a.out"],
-        "cpp": ["g++", code_file, "-o", "a.out", "&&", "./a.out"]
-    }
-    if language not in commands:
-        raise ValueError(f"Unsupported language: {language}")
-    return commands[language]
+
 
 
 def get_file_extension(language: str) -> str:
@@ -70,52 +57,82 @@ def execute_code(language: str, code: str, input_data: str):
         if not is_valid:
             return None, f"Code validation failed: {error_message}", 0.0
 
+    temp_dir = tempfile.mkdtemp()
     try:
+        # 파일 이름 결정
         if language == "java":
             class_name = get_java_class_name(code)
-            file_name = f"{class_name}.java"
+            code_file_name = f"{class_name}.java"
+            exec_target = class_name  # for Java execution
         else:
-            file_name = f"temp{get_file_extension(language)}"
+            code_file_name = f"temp{get_file_extension(language)}"
+            exec_target = "a.out"
 
-        # 임시 디렉토리 생성 및 파일 저장
-        temp_dir = tempfile.mkdtemp()
-        code_file_path = os.path.join(temp_dir, file_name)
+        code_path = os.path.join(temp_dir, code_file_name)
+        exec_path = os.path.join(temp_dir, exec_target)
 
-        with open(code_file_path, "w", encoding="utf-8") as code_file:
-            code_file.write(code)
+        # 코드 저장
+        with open(code_path, "w", encoding="utf-8") as f:
+            f.write(code)
 
-        if language == "java":
-            command = get_execution_command(language, code_file_path, class_name)
-        else:
-            command = get_execution_command(language, code_file_path)
+        # 컴파일 단계 (실행 시간 측정 제외)
+        if language in ["cpp", "c", "java"]:
+            compile_cmd = get_compile_command(language, code_path, exec_path)
+            compile_proc = subprocess.run(
+                compile_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=temp_dir
+            )
+            if compile_proc.returncode != 0:
+                compile_error = compile_proc.stderr.decode().strip()
+                return None, f"Compilation failed: {compile_error}", 0.0
+
+        # 실행 커맨드 구성
+        run_cmd = get_execution_command(language, exec_path if language != "java" else temp_dir, exec_target if language == "java" else None)
 
         # 실행 시간 측정 시작
-        start_time = time.time()
-
-        process = subprocess.run(
-            " ".join(command),
+        exec_start = time.time()
+        exec_proc = subprocess.run(
+            run_cmd,
             input=input_data,
             text=True,
-            shell=True,
             capture_output=True,
-            timeout=3
+            cwd=temp_dir,
+            timeout=3,
+            shell=False
         )
+        exec_end = time.time()
 
-        # 실행 시간 측정 종료
-        end_time = time.time()
-        execution_time = round(end_time - start_time, 3)  # 소수점 6자리까지 반환
+        stdout = exec_proc.stdout.strip()
+        stderr = exec_proc.stderr.strip()
+        exec_time = round(exec_end - exec_start, 3)
 
-        return process.stdout.strip(), process.stderr.strip(), execution_time
+        return stdout, stderr, exec_time
 
     except subprocess.TimeoutExpired:
         return None, "Execution timed out.", 3.0
-    except ValueError as e:
-        return None, str(e), 0.0
     except Exception as e:
         return None, str(e), 0.0
     finally:
-        # 디렉토리 및 파일 삭제
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        if os.path.exists("a.out"):
-            os.remove("a.out")
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+def get_compile_command(language: str, source_path: str, output_path: str):
+    if language == "cpp":
+        return ["g++", source_path, "-o", output_path]
+    elif language == "c":
+        return ["gcc", source_path, "-o", output_path]
+    elif language == "java":
+        return ["javac", source_path]
+    else:
+        raise ValueError(f"Unsupported language for compilation: {language}")
+    
+def get_execution_command(language: str, run_target_path: str, class_name: str = None):
+    if language == "python":
+        return ["python3", run_target_path]
+    elif language in ["cpp", "c"]:
+        return [run_target_path]  # 실행파일 경로 직접 실행
+    elif language == "java":
+        return ["java", "-cp", run_target_path, class_name]
+    else:
+        raise ValueError(f"Unsupported language for execution: {language}")
