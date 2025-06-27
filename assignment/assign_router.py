@@ -622,6 +622,8 @@ def execute_tests_and_get_results(language, code, testcases):
         output, error, exec_time_s = execute_code(language, code, input_data)
 
         if error:
+            if str(error) == "Execution timed out.":
+                raise HTTPException(status_code=400, detail="Execution timed out.")
             results.append({
                 "case_number": num + 1,
                 "result": "Error",

@@ -3,8 +3,9 @@ import ast
 import tempfile
 import os
 import re
-import shutil 
+import shutil
 import time
+
 def validate_code(code: str):
     try:
         tree = ast.parse(code)
@@ -21,7 +22,6 @@ def validate_code(code: str):
     except Exception as e:
         return False, f"Code validation error: {str(e)}"
 
-
 def get_java_class_name(code: str) -> str:
     """
     Java 코드에서 public class 이름을 추출합니다.
@@ -30,10 +30,6 @@ def get_java_class_name(code: str) -> str:
     if match:
         return match.group(1)
     raise ValueError("No public class found in Java code.")
-
-
-
-
 
 def get_file_extension(language: str) -> str:
     """
@@ -50,6 +46,25 @@ def get_file_extension(language: str) -> str:
         raise ValueError(f"Unsupported language: {language}")
     return extensions[language]
 
+def get_compile_command(language: str, source_path: str, output_path: str):
+    if language == "cpp":
+        return ["g++", source_path, "-o", output_path]
+    elif language == "c":
+        return ["gcc", source_path, "-o", output_path]
+    elif language == "java":
+        return ["javac", source_path]
+    else:
+        raise ValueError(f"Unsupported language for compilation: {language}")
+
+def get_execution_command(language: str, run_target_path: str, class_name: str = None):
+    if language == "python":
+        return ["python3", run_target_path]
+    elif language in ["cpp", "c"]:
+        return [run_target_path]  # 실행파일 경로 직접 실행
+    elif language == "java":
+        return ["java", "-cp", run_target_path, class_name]
+    else:
+        raise ValueError(f"Unsupported language for execution: {language}")
 
 def execute_code(language: str, code: str, input_data: str):
     if language == "python":
@@ -63,10 +78,10 @@ def execute_code(language: str, code: str, input_data: str):
         if language == "java":
             class_name = get_java_class_name(code)
             code_file_name = f"{class_name}.java"
-            exec_target = class_name  # for Java execution
+            exec_target = class_name  # Java는 class name
         else:
             code_file_name = f"temp{get_file_extension(language)}"
-            exec_target = "a.out"
+            exec_target = code_file_name if language == "python" else "a.out"
 
         code_path = os.path.join(temp_dir, code_file_name)
         exec_path = os.path.join(temp_dir, exec_target)
@@ -75,7 +90,7 @@ def execute_code(language: str, code: str, input_data: str):
         with open(code_path, "w", encoding="utf-8") as f:
             f.write(code)
 
-        # 컴파일 단계 (실행 시간 측정 제외)
+        # 컴파일 단계 (Python은 제외)
         if language in ["cpp", "c", "java"]:
             compile_cmd = get_compile_command(language, code_path, exec_path)
             compile_proc = subprocess.run(
@@ -89,7 +104,11 @@ def execute_code(language: str, code: str, input_data: str):
                 return None, f"Compilation failed: {compile_error}", 0.0
 
         # 실행 커맨드 구성
-        run_cmd = get_execution_command(language, exec_path if language != "java" else temp_dir, exec_target if language == "java" else None)
+        run_cmd = get_execution_command(
+            language,
+            exec_path if language != "java" else temp_dir,
+            exec_target if language == "java" else None
+        )
 
         # 실행 시간 측정 시작
         exec_start = time.time()
@@ -116,23 +135,3 @@ def execute_code(language: str, code: str, input_data: str):
         return None, str(e), 0.0
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-
-def get_compile_command(language: str, source_path: str, output_path: str):
-    if language == "cpp":
-        return ["g++", source_path, "-o", output_path]
-    elif language == "c":
-        return ["gcc", source_path, "-o", output_path]
-    elif language == "java":
-        return ["javac", source_path]
-    else:
-        raise ValueError(f"Unsupported language for compilation: {language}")
-    
-def get_execution_command(language: str, run_target_path: str, class_name: str = None):
-    if language == "python":
-        return ["python3", run_target_path]
-    elif language in ["cpp", "c"]:
-        return [run_target_path]  # 실행파일 경로 직접 실행
-    elif language == "java":
-        return ["java", "-cp", run_target_path, class_name]
-    else:
-        raise ValueError(f"Unsupported language for execution: {language}")
