@@ -98,7 +98,7 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
                     .filter(AssignmentTestcase.assignment_id == assignment_id).all())
         return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
-                ,"created_by" : assignment.created_by,"testcases" : testcases}
+                ,"created_by" : assignment.created_by,"testcases" : testcases, "timelimit":assignment.time_limit }
 
 @router.get("/info_mentee") # assignment 자체의 info 멘티경우
 def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
@@ -110,7 +110,7 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
                     .filter(AssignmentTestcase.assignment_id == assignment_id).limit(3).all())
         return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
-                ,"created_by" : assignment.created_by,"testcases" : testcases}
+                ,"created_by" : assignment.created_by,"testcases" : testcases, "timelimit":assignment.time_limit}
 
 @router.get("/status/maker/all",summary="멘토 기준 전체 과제 정보 반환") # 테스트 필요
 def mentor_status_all(class_id : str
