@@ -40,7 +40,8 @@ def create_assign(data : AssignmentData
 
     new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
                            ,title = data.title, description = data.description
-                           ,created_by = user, category_id=data.category_id )
+                           ,created_by = user, category_id=data.category_id
+                           ,time_limit=data.time_limit)
     #assignment 기본 정보 저장
     #testcase 추가 필요
     as_db.add(new_assign)
@@ -61,6 +62,7 @@ def modify_assign(data : AssignmentModify ,credentials: HTTPAuthorizationCredent
     assignment.description = data.description
     assignment.title = data.title
     assignment.category_id = data.category_id
+    assignment.time_limit = data.time_limit
     as_db.commit()
     modify_testcase(data.testcase,data.assignment_id,as_db)
     as_db.commit()
@@ -547,7 +549,7 @@ def submit(data : Submit
         raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
 
     # 테스트 실행 및 결과 저장
-    results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases)
+    results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases, assignment.time_limit)
 
     # 결과를 AssignmentSubmission 테이블에 저장
     old_submission = as_db.query(AssignmentSubmission)\
@@ -595,7 +597,7 @@ async def test_assignment(data: Test,
         raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
 
     # 테스트 실행 및 결과 저장
-    results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases)
+    results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases, assignment.time_limit)
 
     # 결과를 AssignmentSubmission 테이블에 저장
 
@@ -607,7 +609,7 @@ async def test_assignment(data: Test,
     }
 
 
-def execute_tests_and_get_results(language, code, testcases):
+def execute_tests_and_get_results(language, code, testcases, time_limit=None):
     from assignment.restricted_execution import execute_code
 
     results = []
@@ -619,7 +621,7 @@ def execute_tests_and_get_results(language, code, testcases):
         expected_output = testcase.expected_output
 
         # 코드 실행 (stdout, stderr, 실행 시간)
-        output, error, exec_time_s = execute_code(language, code, input_data)
+        output, error, exec_time_s = execute_code(language, code, input_data, time_limit)
 
         if error:
             if str(error) == "Execution timed out.":

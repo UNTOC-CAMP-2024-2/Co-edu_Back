@@ -66,7 +66,7 @@ def get_execution_command(language: str, run_target_path: str, class_name: str =
     else:
         raise ValueError(f"Unsupported language for execution: {language}")
 
-def execute_code(language: str, code: str, input_data: str):
+def execute_code(language: str, code: str, input_data: str, time_limit: int = 3):
     if language == "python":
         is_valid, error_message = validate_code(code)
         if not is_valid:
@@ -112,13 +112,24 @@ def execute_code(language: str, code: str, input_data: str):
 
         # 실행 시간 측정 시작
         exec_start = time.time()
+
+        # 언어별로 timeout 계산
+        if time_limit is None:
+            timeout_val = 3
+        elif language == "python":
+            timeout_val = time_limit * 3 + 2
+        elif language == "java":
+            timeout_val = time_limit * 2 + 2
+        else:
+            timeout_val = time_limit
+
         exec_proc = subprocess.run(
             run_cmd,
             input=input_data,
             text=True,
             capture_output=True,
             cwd=temp_dir,
-            timeout=3,
+            timeout=timeout_val,
             shell=False
         )
         exec_end = time.time()

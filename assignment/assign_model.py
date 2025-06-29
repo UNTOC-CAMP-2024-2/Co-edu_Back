@@ -44,6 +44,8 @@ class Assignment(as_Base):
 
     category_id = Column(Integer, ForeignKey("AssignmentCategory.id"), nullable=True)
 
+    time_limit = Column(Integer, nullable=True)
+
     category = relationship("AssignmentCategory", back_populates="assignments")
 
 class AssignmentTestcase(as_Base):
