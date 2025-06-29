@@ -156,17 +156,17 @@ def mentor_status_all(class_id : str
             submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment.assignment_id,
                                                                   AssignmentSubmission.user_id == member).first()
             if submission == None :
-                submission_list.append({"user_id" : member,"status" : False})
+                submission_list.append({"user_id" : member, "name": get_user_name(member, user_db), "status" : False})
             else :
-                submission_list.append({"user_id" : member, "code" : submission.code, "correct" : submission.correct
+                submission_list.append({"user_id" : member, "name": get_user_name(member, user_db), "code" : submission.code, "correct" : submission.correct
                                         ,"detailed_result" : submission.detailed_result})
             mem_feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment.assignment_id,
                                                                   AssignmentFeedBack.user_id == member).first()
             
             if mem_feedback == None :
-                feedback_list.append({"user_id" : member, "feedback" : False})
+                feedback_list.append({"user_id" : member, "name": get_user_name(member, user_db), "feedback" : False})
             else:
-                feedback_list.append({"user_id" : member, "feedback" : mem_feedback.feedback})
+                feedback_list.append({"user_id" : member, "name": get_user_name(member, user_db), "feedback" : mem_feedback.feedback})
         
         as_data = {
             "assignment_id" : assignment.assignment_id,

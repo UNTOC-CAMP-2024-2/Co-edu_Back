@@ -17,6 +17,7 @@ from typing import List
 
 from assignment.assign_db import get_asdb
 from assignment.assign_model import AssignmentCategory
+from user.user_func import get_user_name
 security = HTTPBearer()
 
 
@@ -285,7 +286,13 @@ def show_edit(class_code : str
     ).all()
 
     pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
-    return {"class_info" : classroom_data, "user_info" : usertoclass, "approval" : [PendingApprovalInfo(user_id=pa.user_id, class_code=pa.class_code, requested_at=pa.requested_at) for pa in pending_approvals]}
+    user_info = []
+    for utc in usertoclass:
+        user_info.append({"user_id": utc.user_id, "name": get_user_name(utc.user_id, cs_db)})
+    approval = []
+    for pa in pending_approvals:
+        approval.append({"user_id": pa.user_id, "name": get_user_name(pa.user_id, cs_db), "class_code": pa.class_code, "requested_at": pa.requested_at})
+    return {"class_info" : classroom_data, "user_info" : user_info, "approval" : approval}
 
 @router.patch("/edit_classinfo", summary="클래스룸 정보 수정하기")
 def edit_classinfo(data: UpdateClassroomInfoRequest,

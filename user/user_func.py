@@ -120,3 +120,7 @@ def email_send(email, code):
 
     except Exception as e:
         raise HTTPException(status_code= 400, detail="이메일전송에 실패하였습니다. 정상적인 이메일인지 확인해주세요.")
+
+def get_user_name(user_id: str, db):
+    user = db.query(User).filter(User.user_id == user_id).first()
+    return user.name if user else None
