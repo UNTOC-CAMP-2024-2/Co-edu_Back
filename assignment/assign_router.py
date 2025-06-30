@@ -41,7 +41,7 @@ def create_assign(data : AssignmentData
     new_assign =Assignment(assignment_id = new_id, class_id = data.class_id
                            ,title = data.title, description = data.description
                            ,created_by = user, category_id=data.category_id
-                           ,time_limit=data.time_limit)
+                           ,time_limit=float(data.time_limit) if data.time_limit is not None else None)
     #assignment 기본 정보 저장
     #testcase 추가 필요
     as_db.add(new_assign)
@@ -62,7 +62,7 @@ def modify_assign(data : AssignmentModify ,credentials: HTTPAuthorizationCredent
     assignment.description = data.description
     assignment.title = data.title
     assignment.category_id = data.category_id
-    assignment.time_limit = data.time_limit
+    assignment.time_limit = float(data.time_limit) if data.time_limit is not None else None
     as_db.commit()
     modify_testcase(data.testcase,data.assignment_id,as_db)
     as_db.commit()

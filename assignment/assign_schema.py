@@ -11,7 +11,7 @@ class AssignmentData(BaseModel):
     title : str
     description : str
     testcase : list[TestCase]
-    time_limit: int | None = None
+    time_limit: float | None = None
 
 class AssignmentModify(BaseModel):
     assignment_id : str
@@ -19,7 +19,7 @@ class AssignmentModify(BaseModel):
     title : str
     category_id: int 
     testcase : list[TestCase]
-    time_limit: int | None = None
+    time_limit: float | None = None
 
 class Submit(BaseModel):
     assignment_id : str

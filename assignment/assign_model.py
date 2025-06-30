@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey
+from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey,Float
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from assignment.assign_db import as_Base
 from assignment.assign_schema import *
@@ -45,7 +45,7 @@ class Assignment(as_Base):
 
     category_id = Column(Integer, ForeignKey("AssignmentCategory.id"), nullable=True)
 
-    time_limit = Column(Integer, nullable=True)
+    time_limit = Column(Float, nullable=True)
 
     category = relationship("AssignmentCategory", back_populates="assignments")
 
