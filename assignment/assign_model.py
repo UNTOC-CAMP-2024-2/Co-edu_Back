@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey,MEDIUMTEXT
+from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from assignment.assign_db import as_Base
 from assignment.assign_schema import *
 from sqlalchemy.orm import relationship
