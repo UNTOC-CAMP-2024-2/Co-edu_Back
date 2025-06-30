@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey
+from sqlalchemy import Column, Integer, String,Boolean,DateTime,TEXT,JSON,ForeignKey,MEDIUMTEXT
 from assignment.assign_db import as_Base
 from assignment.assign_schema import *
 from sqlalchemy.orm import relationship
@@ -52,8 +52,8 @@ class AssignmentTestcase(as_Base):
     __tablename__ = "Testcase"
     id = Column(Integer, primary_key=True, index=True)
     assignment_id = Column(String(10),nullable=False,index=True)
-    input = Column(TEXT)
-    expected_output = Column(TEXT)
+    input = Column(MEDIUMTEXT)
+    expected_output = Column(MEDIUMTEXT)
 
 class AssignmentFeedBack(as_Base):
     __tablename__ = "AssignmentFeedBack"
