@@ -270,7 +270,8 @@ def class_info(class_code : str
 @router.get("/show_edit", summary="설정부분 정보불러오기")
 def show_edit(class_code : str
               , credentials: HTTPAuthorizationCredentials = Security(security)
-                , cs_db: Session = Depends(get_csdb)):
+                , cs_db: Session = Depends(get_csdb)
+                ,user_db: Session = Depends(get_userdb)):
     token = credentials.credentials
     user = token_decode(token)
 
@@ -288,10 +289,10 @@ def show_edit(class_code : str
     pending_approvals = cs_db.query(PendingApproval).filter(PendingApproval.class_code == class_code).all()
     user_info = []
     for utc in usertoclass:
-        user_info.append({"user_id": utc.user_id, "name": get_user_name(utc.user_id, cs_db)})
+        user_info.append({"user_id": utc.user_id, "name": get_user_name(utc.user_id, user_db)})
     approval = []
     for pa in pending_approvals:
-        approval.append({"user_id": pa.user_id, "name": get_user_name(pa.user_id, cs_db), "class_code": pa.class_code, "requested_at": pa.requested_at})
+        approval.append({"user_id": pa.user_id, "name": get_user_name(pa.user_id, user_db), "class_code": pa.class_code, "requested_at": pa.requested_at})
     return {"class_info" : classroom_data, "user_info" : user_info, "approval" : approval}
 
 @router.patch("/edit_classinfo", summary="클래스룸 정보 수정하기")
