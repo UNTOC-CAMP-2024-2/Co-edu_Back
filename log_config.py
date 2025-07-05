@@ -2,8 +2,6 @@ import logging
 import logging.config
 import logging.handlers
 
-LOG_FILE_PATH = "app.log"
-
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -13,12 +11,36 @@ LOGGING_CONFIG = {
         },
     },
     "handlers": {
-        "rotating_file": {
+        "user_file": {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOG_FILE_PATH,
-            "maxBytes": 5 * 1024 * 1024,  
-            "backupCount": 3,  
+            "filename": "user.log",
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 3,
+            "formatter": "default",
+        },
+        "assignment_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "assignment.log",
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 3,
+            "formatter": "default",
+        },
+        "classroom_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "classroom.log",
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 3,
+            "formatter": "default",
+        },
+        "live_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "live.log",
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 3,
             "formatter": "default",
         },
         "console": {
@@ -28,13 +50,23 @@ LOGGING_CONFIG = {
         },
     },
     "loggers": {
-        "uvicorn": {
-            "handlers": ["rotating_file", "console"],
+        "user": {
+            "handlers": ["user_file", "console"],
             "level": "INFO",
             "propagate": False,
         },
-        "fastapi": {
-            "handlers": ["rotating_file", "console"],
+        "assignment": {
+            "handlers": ["assignment_file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "classroom": {
+            "handlers": ["classroom_file", "console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "live": {
+            "handlers": ["live_file", "console"],
             "level": "INFO",
             "propagate": False,
         },
@@ -42,4 +74,3 @@ LOGGING_CONFIG = {
 }
 
 logging.config.dictConfig(LOGGING_CONFIG)
-logger = logging.getLogger("fastapi")

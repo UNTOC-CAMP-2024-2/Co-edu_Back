@@ -5,6 +5,9 @@ import json
 from assignment.restricted_execution import execute_code
 from user.user_func import token_decode
 from live.live_schema import Run
+import logging
+
+logger = logging.getLogger("live")
 
 security = HTTPBearer()
 router = APIRouter(
@@ -24,30 +27,32 @@ class StudyRoomManager:
 
         if role == "host":
             if self.rooms[room_id]['host']:
+                logger.warning("[live][connect][WS][fail] room_id=%s, status=실패, message=Host already exists", room_id)
                 raise HTTPException(status_code=400, detail="Host already exists for this room.")
             self.rooms[room_id]['host'] = websocket
-            print(f"[INFO] Host connected to room {room_id}")
+            logger.info("[live][connect][WS][success] room_id=%s, role=host, status=성공, message=Host connected", room_id)
         elif role == "student":
             if not user_id:
+                logger.warning("[live][connect][WS][fail] room_id=%s, status=실패, message=Student must provide a user_id", room_id)
                 raise HTTPException(status_code=400, detail="Student must provide a user_id.")
             self.rooms[room_id]['students'][user_id] = websocket
-            print(f"[INFO] Student {user_id} connected to room {room_id}")
+            logger.info("[live][connect][WS][success] room_id=%s, role=student, user_id=%s, status=성공, message=Student connected", room_id, user_id)
 
     def disconnect(self, room_id: str, websocket: WebSocket):
         if room_id in self.rooms:
             if websocket == self.rooms[room_id]['host']:
                 self.rooms[room_id]['host'] = None
-                print(f"[INFO] Host disconnected from room {room_id}")
+                logger.info("[live][disconnect][WS][info] room_id=%s, role=host, message=Host disconnected", room_id)
             else:
                 for user_id, student_ws in self.rooms[room_id]['students'].items():
                     if student_ws == websocket:
                         del self.rooms[room_id]['students'][user_id]
-                        print(f"[INFO] Student {user_id} disconnected from room {room_id}")
+                        logger.info("[live][disconnect][WS][info] room_id=%s, role=student, user_id=%s, message=Student disconnected", room_id, user_id)
                         break
 
             if self.rooms[room_id]['host'] is None and not self.rooms[room_id]['students']:
                 del self.rooms[room_id]
-                print(f"[INFO] Room {room_id} removed (empty).")
+                logger.info("[live][disconnect][WS][info] room_id=%s, message=Room removed (empty)", room_id)
 
     async def send_to_host(self, room_id: str, user_id: str, offer: Optional[dict] = None, candidate: Optional[dict] = None):
         if room_id in self.rooms and self.rooms[room_id]['host']:
@@ -58,9 +63,9 @@ class StudyRoomManager:
                 message["candidate"] = candidate
             try:
                 await self.rooms[room_id]['host'].send_text(json.dumps(message))
-                print(f"[INFO] Sent data from student {user_id} to host in room {room_id}: {message}")
+                logger.info("[live][send_to_host][WS][success] room_id=%s, user_id=%s, status=성공, message=Sent data to host", room_id, user_id)
             except Exception as e:
-                print(f"[ERROR] Failed to send data to host: {e}")
+                logger.error("[live][send_to_host][WS][fail] room_id=%s, user_id=%s, status=실패, message=%s", room_id, user_id, str(e))
 
     async def send_to_student(self, room_id: str, user_id: str, answer: Optional[dict] = None, candidate: Optional[dict] = None):
         if room_id in self.rooms and user_id in self.rooms[room_id]['students']:
@@ -71,9 +76,9 @@ class StudyRoomManager:
                 message["candidate"] = candidate
             try:
                 await self.rooms[room_id]['students'][user_id].send_text(json.dumps(message))
-                print(f"[INFO] Sent data to student {user_id} in room {room_id}: {message}")
+                logger.info("[live][send_to_student][WS][success] room_id=%s, user_id=%s, status=성공, message=Sent data to student", room_id, user_id)
             except Exception as e:
-                print(f"[ERROR] Failed to send data to student: {e}")
+                logger.error("[live][send_to_student][WS][fail] room_id=%s, user_id=%s, status=실패, message=%s", room_id, user_id, str(e))
 
 
 
@@ -94,7 +99,6 @@ async def websocket_endpoint(
             try:
                 json_data = json.loads(data)  # JSON으로 변환
                 if role == "student" and user_id:
-                    # Offer 또는 Candidate를 전송
                     await manager.send_to_host(
                         room_id,
                         user_id,
@@ -102,7 +106,6 @@ async def websocket_endpoint(
                         candidate=json_data.get("candidate")
                     )
                 elif role == "host":
-                    # 특정 학생에게 Answer 또는 Candidate 전송
                     target_user = json_data.get("userId")
                     if target_user:
                         await manager.send_to_student(
@@ -112,12 +115,12 @@ async def websocket_endpoint(
                             candidate=json_data.get("candidate")
                         )
             except json.JSONDecodeError:
-                print(f"[ERROR] Invalid JSON received: {data}")
+                logger.error("[live][websocket][WS][fail] room_id=%s, role=%s, user_id=%s, status=실패, message=Invalid JSON received: %s", room_id, role, user_id, data)
     except WebSocketDisconnect:
         manager.disconnect(room_id, websocket)
-        print(f"[INFO] {role} {user_id or 'host'} disconnected from room {room_id}.")
+        logger.info("[live][websocket][WS][disconnect] room_id=%s, role=%s, user_id=%s, message=WebSocket disconnected", room_id, role, user_id or 'host')
     except Exception as e:
-        print(f"[ERROR] Unexpected error: {e}")
+        logger.error("[live][websocket][WS][fail] room_id=%s, role=%s, user_id=%s, status=실패, message=Unexpected error: %s", room_id, role, user_id, str(e))
 
 
 @router.post("/runcode")
@@ -131,11 +134,13 @@ async def test_assignment(data: Run,
     output, error, exec_time_s = execute_code(data.language, data.code, data.input)
 
     if error:
+        logger.error("[live][runcode][POST][fail] user_id=%s, status=실패, message=%s", user, str(error))
         return {
             "status": "error",
             "details" : str(error)
         }
     else:
+        logger.info("[live][runcode][POST][success] user_id=%s, status=성공, message=코드 실행 성공", user)
         return {
             "status": "success",
             "details" : (output,exec_time_s)

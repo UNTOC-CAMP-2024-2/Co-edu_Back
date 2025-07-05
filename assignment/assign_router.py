@@ -12,6 +12,9 @@ from classroom.cs_model import *
 from user.user_func import *
 from user.user_db import *
 import random
+import logging
+
+logger = logging.getLogger("assignment")
 
 security = HTTPBearer()
 
@@ -32,6 +35,7 @@ def create_assign(data : AssignmentData
     check_created(user,data.class_id,cs_db)
     category = as_db.query(AssignmentCategory).filter_by(id=data.category_id).first()
     if category is None:
+        logger.warning("[assignment][create][POST][fail] user_id=%s, params=%s, status=실패, message=해당 카테고리가 존재하지 않습니다.", user, {"class_id": data.class_id, "category_id": data.category_id})
         raise HTTPException(status_code=404, detail="해당 카테고리가 존재하지 않습니다.")
     
     while new_id == None:
@@ -48,6 +52,7 @@ def create_assign(data : AssignmentData
     as_db.commit()
     as_db.refresh(new_assign)
     create_testcase(data.testcase,new_id,as_db)
+    logger.info("[assignment][create][POST][success] user_id=%s, params=%s, status=성공, message=과제 생성 완료", user, {"class_id": data.class_id, "assignment_id": new_id})
     return {"status" : "과제가 정상적으로 생성되었습니다.","assignment_id": new_id}
 
 
@@ -66,8 +71,8 @@ def modify_assign(data : AssignmentModify ,credentials: HTTPAuthorizationCredent
     as_db.commit()
     modify_testcase(data.testcase,data.assignment_id,as_db)
     as_db.commit()
-    #과제 정보 수정
-
+    logger.info("[assignment][modify][POST][success] user_id=%s, params=%s, status=성공, message=과제 수정 완료", user, {"assignment_id": data.assignment_id})
+    return {"status": "과제 정보가 정상적으로 수정되었습니다."}
 
 @router.delete("/delete") #assignment delete --> 완료
 def delete_assign(assignment_id : str
@@ -78,24 +83,29 @@ def delete_assign(assignment_id : str
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
+        logger.warning("[assignment][delete][DELETE][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else:
         check_created(user,assignment.class_id,cs_db)
         is_assignment_created(user,assignment_id,as_db) #권한쟁의
         if user == assignment.created_by :
             delete_assignment(db= as_db, assignment=assignment)
+            logger.info("[assignment][delete][DELETE][success] user_id=%s, params=%s, status=성공, message=과제 삭제 완료", user, {"assignment_id": assignment_id})
             return "성공적으로 과제가 삭제되었습니다."
         else :
+            logger.warning("[assignment][delete][DELETE][fail] user_id=%s, params=%s, status=실패, message=과제 생성자가 아님", user, {"assignment_id": assignment_id})
             return HTTPException(status_code=400, detail="과제를 생성한 유저가 아닙니다.")
 
 @router.get("/info") # assignment 자체의 info
 def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
+        logger.warning("[assignment][info][GET][fail] params=%s, status=실패, message=과제가 존재하지 않습니다.", {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         testcases = (as_db.query(AssignmentTestcase)
                     .filter(AssignmentTestcase.assignment_id == assignment_id).all())
+        logger.info("[assignment][info][GET][success] params=%s, status=성공, message=과제 정보 반환", {"assignment_id": assignment_id})
         return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
                 ,"created_by" : assignment.created_by,"testcases" : testcases, "timelimit":assignment.time_limit }
@@ -104,15 +114,17 @@ def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
 def assign_info(assignment_id : str, as_db : Session=Depends(get_asdb)):
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
+        logger.warning("[assignment][info_mentee][GET][fail] params=%s, status=실패, message=과제가 존재하지 않습니다.", {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         testcases = (as_db.query(AssignmentTestcase)
                     .filter(AssignmentTestcase.assignment_id == assignment_id).limit(3).all())
+        logger.info("[assignment][info_mentee][GET][success] params=%s, status=성공, message=과제 정보 반환(멘티)", {"assignment_id": assignment_id})
         return {"assignment_id" : assignment_id, "class_id" : assignment.class_id
                 ,"title" : assignment.title,"description" : assignment.description
                 ,"created_by" : assignment.created_by,"testcases" : testcases, "timelimit":assignment.time_limit}
 
-@router.get("/status/maker/all",summary="멘토 기준 전체 과제 정보 반환") # 테스트 필요
+@router.get("/status/maker/all",summary="멘토 기준 전체 과제 정보 반환")
 def mentor_status_all(class_id : str
                   ,credentials: HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb)
@@ -122,6 +134,7 @@ def mentor_status_all(class_id : str
     token = credentials.credentials
     user = token_decode(token)
     if classroom is None:
+        logger.warning("[assignment][status/maker/all][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     check_created(user,class_id,cs_db)
     classroom_users = classroom.current_member-1
@@ -177,6 +190,7 @@ def mentor_status_all(class_id : str
             ,"feedbacks" : feedback_list # user_db에서 멘토 id 받아와서 없으면 false 반환
             ,"submissions" : submission_list}
         result.append(as_data)
+    logger.info("[assignment][status/maker/all][GET][success] user_id=%s, params=%s, status=성공, message=전체 과제 정보 반환", user, {"class_id": class_id})
     return result
 
 @router.get("/status/mentee/all",summary="멘티 기준 전체 과제 정보 반환")
@@ -188,6 +202,7 @@ def mentee_status_all(class_id : str
     token = credentials.credentials
     user = token_decode(token)
     if classroom is None:
+        logger.warning("[assignment][status/mentee/all][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
     if assignments == None :
@@ -213,9 +228,10 @@ def mentee_status_all(class_id : str
                         , "status" : submission.correct,"code" : submission.code 
                         , "feedback" : feedback}
                 result.append(as_data)
+    logger.info("[assignment][status/mentee/all][GET][success] user_id=%s, params=%s, status=성공, message=전체 과제 정보 반환(멘티)", user, {"class_id": class_id})
     return result
 
-@router.get("/mentee_return_three", summary= "멘티 기준 상위 3개의 전체 과제/내가 제출한 과제/과제 피드백 상태 반환") #테스트 필요
+@router.get("/mentee_return_three", summary= "멘티 기준 상위 3개의 전체 과제/내가 제출한 과제/과제 피드백 상태 반환")
 def mentee_return_three(class_id : str,
                         credentials : HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb),
@@ -224,6 +240,7 @@ def mentee_return_three(class_id : str,
     token = credentials.credentials
     user = token_decode(token)
     if classroom is None:
+        logger.warning("[assignment][mentee_return_three][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     assignments = as_db.query(Assignment)\
             .filter(Assignment.class_id == class_id)\
@@ -250,9 +267,10 @@ def mentee_return_three(class_id : str,
         if feedback:
             al_list[-1]["status"] = "getFeedback"
             fed_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "getFeedback"})
+    logger.info("[assignment][mentee_return_three][GET][success] user_id=%s, params=%s, status=성공, message=멘티 상위 3개 과제/제출/피드백 반환", user, {"class_id": class_id})
     return {"상위 3개 과제" : al_list[:3],"제출한 상위 3개 과제":sub_list[:3],"상위 3개 피드백":fed_list[:3]}
 
-@router.get("/mentor_return_three", summary= "멘토 기준 상위 3개의 전체 과제/과제 피드백 반환") #테스트 필요
+@router.get("/mentor_return_three", summary= "멘토 기준 상위 3개의 전체 과제/과제 피드백 반환")
 def mentee_return_three(class_id : str,
                         credentials : HTTPAuthorizationCredentials = Security(security)
                   ,as_db : Session=Depends(get_asdb),
@@ -262,6 +280,7 @@ def mentee_return_three(class_id : str,
     user = token_decode(token)
     check_created(user,class_id,cs_db)
     if classroom is None:
+        logger.warning("[assignment][mentor_return_three][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     
     al_list = []#완료 상태 표시(전체 과제에서)
@@ -305,6 +324,7 @@ def mentee_return_three(class_id : str,
             "feedback_status" : feedback_status
         })
         
+    logger.info("[assignment][mentor_return_three][GET][success] user_id=%s, params=%s, status=성공, message=멘토 상위 3개 과제/피드백 반환", user, {"class_id": class_id})
     return {"상위 3개 과제": al_list[:3],"상위 3개 과제 및 피드백 상태": fed_list[:3]}
 
 @router.get("/mysubmission",summary = "내가 제출한 과제 표시")
@@ -316,6 +336,7 @@ def mysubmission(class_id : str
     token = credentials.credentials
     user = token_decode(token)
     if classroom is None:
+        logger.warning("[assignment][mysubmission][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
@@ -339,6 +360,7 @@ def mysubmission(class_id : str
                         , "status" : submission.correct,"code" : submission.code, "submitted_at" : submission.submitted_at
                         , "feedback" : feedback}
                 result.append(as_data)
+    logger.info("[assignment][mysubmission][GET][success] user_id=%s, params=%s, status=성공, message=내가 제출한 과제 반환", user, {"class_id": class_id})
     return result
 
 @router.get("/myfeedbacks",summary="받은 피드백 표시")
@@ -350,7 +372,8 @@ def myfeedbacks(class_id : str
     user = token_decode(token)
     classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     if classroom == None :
-        return HTTPException(status_code=404, detail="클래스룸이 존재하지 않습니다.")
+        logger.warning("[assignment][myfeedbacks][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
+        raise HTTPException(status_code=404, detail="클래스룸이 존재하지 않습니다.")
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id)
     result = []
     for assignment in assignments:
@@ -361,6 +384,7 @@ def myfeedbacks(class_id : str
         else:
             data = {"assignment_id" : assignment.assignment_id, "title" : assignment.title , "feedback" : feedback.feedback}
             result.append(data)
+    logger.info("[assignment][myfeedbacks][GET][success] user_id=%s, params=%s, status=성공, message=받은 피드백 반환", user, {"class_id": class_id})
     if result == []:
         return "받은 피드백이 없습니다."
     else :
@@ -376,6 +400,7 @@ def mentor_status(assignment_id : str
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
+        logger.warning("[assignment][status/maker][GET][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         check_created(user,assignment.class_id,cs_db)
@@ -422,10 +447,11 @@ def mentor_status(assignment_id : str
             else:
                 feedback_list.append({"user_id" : member, "feedback" : mem_feedback.feedback})
 
+        logger.info("[assignment][status/maker][GET][success] user_id=%s, params=%s, status=성공, message=멘토 개별 과제 status 반환", user, {"assignment_id": assignment_id})
         return {"assignment_status" : assignment_status
                 ,"feedback_status" : feedback_status
                 ,"feedbacks" : feedback_list
-                ,"submissions" : submission_list} #여기서도 submissions/feedbacks false 뜨도록 처리 // 라우터 미사용의 가능성이 있음
+                ,"submissions" : submission_list}
 
 
 
@@ -439,14 +465,17 @@ def mentee_status(assignment_id : str
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
+        logger.warning("[assignment][status/mentee][GET][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id
                                                               ,AssignmentSubmission.user_id == user).first()
         if submission == None :
+            logger.warning("[assignment][status/mentee][GET][fail] user_id=%s, params=%s, status=실패, message=제출 이력이 없습니다.", user, {"assignment_id": assignment_id})
             return HTTPException(status_code=404, detail="제출 이력이 없습니다.")
         feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment_id,
                                                           AssignmentFeedBack.user_id == user).first()
+        logger.info("[assignment][status/mentee][GET][success] user_id=%s, params=%s, status=성공, message=멘티 개별 과제 status 반환", user, {"assignment_id": assignment_id})
         return {"assignment_id" : assignment_id, "user_id" : user
                 , "status" : submission.correct,"code" : submission.code, "submitted_at" : submission.submitted_at
                 , "feedback" : feedback}
@@ -456,9 +485,11 @@ def mentee_status(assignment_id : str
 def info(class_id : str, as_db : Session=Depends(get_asdb),cs_db : Session=Depends(get_csdb)):
     classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     if classroom == None :
+        logger.warning("[assignment][class_assignments][GET][fail] params=%s, status=실패, message=클래스룸이 존재하지 않습니다.", {"class_id": class_id})
         return HTTPException(status_code=404, detail="클래스룸이 존재하지 않습니다.")
     else :
         assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
+        logger.info("[assignment][class_assignments][GET][success] params=%s, status=성공, message=전체 assignments 반환", {"class_id": class_id})
         return [amt for amt in assignments]
 
 #해야 되는 과제 라우터 : 이름 반환 + 했는지 안했는지 ~
@@ -490,6 +521,7 @@ def tasks(credentials : HTTPAuthorizationCredentials = Security(security)
         # 문자열로 추가
         results.append(f"{class_id} : {assignment_stats}")
     
+    logger.info("[assignment][tasks][GET][success] user_id=%s, status=성공, message=해야 되는 과제 리스트 반환", user)
     return {"클래스룸 : [과제 : 제출여부]" :results}
 
 
@@ -503,6 +535,7 @@ def feedback(data : Feedback
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
     if assignment == None :
+        logger.warning("[assignment][feedback][POST][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": data.assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         is_assignment_created(user,data.assignment_id,as_db)
@@ -516,6 +549,7 @@ def feedback(data : Feedback
             as_db.add(new_feedback)
             as_db.commit()
             as_db.refresh(new_feedback)
+            logger.info("[assignment][feedback][POST][success] user_id=%s, params=%s, status=성공, message=피드백 추가", user, {"assignment_id": data.assignment_id, "mentee_id": data.mentee_id})
             return {"status" : "성공","feedback" : data.feedback}
         else :
             as_db.delete(feedback)
@@ -524,6 +558,7 @@ def feedback(data : Feedback
             as_db.add(new_feedback)
             as_db.commit()
             as_db.refresh(new_feedback)
+            logger.info("[assignment][feedback][POST][success] user_id=%s, params=%s, status=성공, message=피드백 갱신", user, {"assignment_id": data.assignment_id, "mentee_id": data.mentee_id})
             return {"status" : "새 피드백을 추가했습니다.", "feedback" : data.feedback}
 
 
@@ -534,24 +569,17 @@ def submit(data : Submit
            ,cs_db : Session=Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-    #classroom 내에 있는지 확인
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
-
     if assignment is None:
+        logger.warning("[assignment][submit][POST][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": data.assignment_id})
         raise HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
-
-    # 테스트케이스 가져오기
     testcases = as_db.query(AssignmentTestcase).filter(
         AssignmentTestcase.assignment_id == data.assignment_id
     ).all()
-
     if not testcases:
+        logger.warning("[assignment][submit][POST][fail] user_id=%s, params=%s, status=실패, message=테스트케이스가 존재하지 않습니다.", user, {"assignment_id": data.assignment_id})
         raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
-
-    # 테스트 실행 및 결과 저장
     results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases, assignment.time_limit)
-
-    # 결과를 AssignmentSubmission 테이블에 저장
     old_submission = as_db.query(AssignmentSubmission)\
         .filter(AssignmentSubmission.assignment_id == data.assignment_id
                 ,AssignmentSubmission.user_id == user).first()
@@ -568,7 +596,7 @@ def submit(data : Submit
     )
     as_db.add(submission)
     as_db.commit()
-
+    logger.info("[assignment][submit][POST][success] user_id=%s, params=%s, status=성공, message=과제 제출 완료", user, {"assignment_id": data.assignment_id})
     return {
         "status": "제출 완료."
     }
@@ -584,23 +612,17 @@ async def test_assignment(data: Test,
     token = credentials.credentials
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == data.assignment_id).first()
-
     if assignment is None:
+        logger.warning("[assignment][test_assignment][POST][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": data.assignment_id})
         raise HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
-
-    # 테스트케이스 가져오기
     testcases = as_db.query(AssignmentTestcase).filter(
         AssignmentTestcase.assignment_id == data.assignment_id
     ).all()
-
     if not testcases:
+        logger.warning("[assignment][test_assignment][POST][fail] user_id=%s, params=%s, status=실패, message=테스트케이스가 존재하지 않습니다.", user, {"assignment_id": data.assignment_id})
         raise HTTPException(status_code=400, detail="테스트케이스가 존재하지 않습니다.")
-
-    # 테스트 실행 및 결과 저장
     results, detailed_result, total_score = execute_tests_and_get_results(data.language, data.code, testcases, assignment.time_limit)
-
-    # 결과를 AssignmentSubmission 테이블에 저장
-
+    logger.info("[assignment][test_assignment][POST][success] user_id=%s, params=%s, status=성공, message=테스트 완료", user, {"assignment_id": data.assignment_id})
     return {
         "status": "테스트가 완료되었습니다.",
         "results": results,
@@ -663,9 +685,11 @@ def get_code_data(assignment_id : str,
     user = token_decode(token)
     assignment = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id, AssignmentSubmission.user_id == user).first()
     if assignment:
+        logger.info("[assignment][code_data][GET][success] user_id=%s, params=%s, status=성공, message=자기 코드 반환", user, {"assignment_id": assignment_id})
         return {"code" : assignment.code, "language" : assignment.language}
     else:
-        return "" #제출내역없으면 아무것도 없이 리턴
+        logger.warning("[assignment][code_data][GET][fail] user_id=%s, params=%s, status=실패, message=제출내역 없음", user, {"assignment_id": assignment_id})
+        return ""
     
 
 @router.post("/category",summary="카테고리 생성")
@@ -674,6 +698,7 @@ def create_category(data: Category, credentials: HTTPAuthorizationCredentials = 
     user = token_decode(token)
     check_created(user,data.class_id,cs_db)
     create_new_category(data,as_db)
+    logger.info("[assignment][category][POST][success] user_id=%s, params=%s, status=성공, message=카테고리 생성", user, {"class_id": data.class_id})
 
 
 @router.get("/categories", summary="클래스룸 내 카테고리 목록 조회")
@@ -682,15 +707,12 @@ def get_categories(class_id: str,
                    as_db: Session = Depends(get_asdb),cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-
-    # 클래스 존재 여부 확인
     classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     if not classroom:
+        logger.warning("[assignment][categories][GET][fail] user_id=%s, params=%s, status=실패, message=클래스룸이 존재하지 않습니다.", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
-
-    # 카테고리 목록 조회
     categories = as_db.query(AssignmentCategory).filter(AssignmentCategory.class_id == class_id).all()
-
+    logger.info("[assignment][categories][GET][success] user_id=%s, params=%s, status=성공, message=카테고리 목록 반환", user, {"class_id": class_id})
     return [{"id": c.id, "name": c.name, "description": c.description} for c in categories]
 
 @router.get("/status/mentee/category/{category_id}", summary="멘티 기준 카테고리별 과제 정보 반환")
@@ -700,35 +722,28 @@ def mentee_status_by_category(category_id: int,
                               cs_db: Session = Depends(get_csdb)):
     token = credentials.credentials
     user = token_decode(token)
-
-    # 카테고리 유효성 검사
     category = as_db.query(AssignmentCategory).filter(AssignmentCategory.id == category_id).first()
     if not category:
+        logger.warning("[assignment][status/mentee/category][GET][fail] user_id=%s, params=%s, status=실패, message=카테고리가 존재하지 않습니다.", user, {"category_id": category_id})
         raise HTTPException(status_code=404, detail="해당 카테고리가 존재하지 않습니다.")
-
-    # 클래스 권한 검사 (멘티가 속한 클래스인지)
     classroom = cs_db.query(Classroom).filter(Classroom.class_code == category.class_id).first()
     if not classroom:
+        logger.warning("[assignment][status/mentee/category][GET][fail] user_id=%s, params=%s, status=실패, message=클래스룸이 존재하지 않습니다.", user, {"category_id": category_id})
         raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
-
-    # 과제 조회
     assignments = as_db.query(Assignment).filter(Assignment.category_id == category_id).all()
     if not assignments:
+        logger.warning("[assignment][status/mentee/category][GET][fail] user_id=%s, params=%s, status=실패, message=카테고리에 속한 과제가 존재하지 않습니다.", user, {"category_id": category_id})
         raise HTTPException(status_code=404, detail="해당 카테고리에 속한 과제가 존재하지 않습니다.")
-
     result = []
-
     for assignment in assignments:
         submission = as_db.query(AssignmentSubmission).filter(
             AssignmentSubmission.assignment_id == assignment.assignment_id,
             AssignmentSubmission.user_id == user
         ).first()
-
         feedback = as_db.query(AssignmentFeedBack).filter(
             AssignmentFeedBack.assignment_id == assignment.assignment_id,
             AssignmentFeedBack.user_id == user
         ).first()
-
         if submission is None:
             as_data = {
                 "assignment_id": assignment.assignment_id,
@@ -745,7 +760,6 @@ def mentee_status_by_category(category_id: int,
                 "code": submission.code,
                 "feedback": bool(feedback)
             }
-
         result.append(as_data)
-
+    logger.info("[assignment][status/mentee/category][GET][success] user_id=%s, params=%s, status=성공, message=카테고리별 과제 정보 반환", user, {"category_id": category_id})
     return result
