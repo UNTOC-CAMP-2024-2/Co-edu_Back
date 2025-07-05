@@ -117,9 +117,9 @@ def execute_code(language: str, code: str, input_data: str, time_limit: int = 3)
         if time_limit is None:
             timeout_val = 3
         elif language == "python":
-            timeout_val = time_limit * 3 + 2
+            timeout_val = time_limit * 3 
         elif language == "java":
-            timeout_val = time_limit * 2 + 2
+            timeout_val = time_limit * 2 
         else:
             timeout_val = time_limit
 
