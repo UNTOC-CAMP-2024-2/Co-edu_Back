@@ -190,7 +190,6 @@ def mentor_status_all(class_id : str
             ,"feedbacks" : feedback_list # user_db에서 멘토 id 받아와서 없으면 false 반환
             ,"submissions" : submission_list}
         result.append(as_data)
-    logger.info("[assignment][status/maker/all][GET][success] user_id=%s, params=%s, status=성공, message=전체 과제 정보 반환", user, {"class_id": class_id})
     return result
 
 @router.get("/status/mentee/all",summary="멘티 기준 전체 과제 정보 반환")
@@ -228,7 +227,6 @@ def mentee_status_all(class_id : str
                         , "status" : submission.correct,"code" : submission.code 
                         , "feedback" : feedback}
                 result.append(as_data)
-    logger.info("[assignment][status/mentee/all][GET][success] user_id=%s, params=%s, status=성공, message=전체 과제 정보 반환(멘티)", user, {"class_id": class_id})
     return result
 
 @router.get("/mentee_return_three", summary= "멘티 기준 상위 3개의 전체 과제/내가 제출한 과제/과제 피드백 상태 반환")
@@ -267,7 +265,6 @@ def mentee_return_three(class_id : str,
         if feedback:
             al_list[-1]["status"] = "getFeedback"
             fed_list.append({"assignment_id" : assignment.assignment_id, "title" : assignment.title, "status" : "getFeedback"})
-    logger.info("[assignment][mentee_return_three][GET][success] user_id=%s, params=%s, status=성공, message=멘티 상위 3개 과제/제출/피드백 반환", user, {"class_id": class_id})
     return {"상위 3개 과제" : al_list[:3],"제출한 상위 3개 과제":sub_list[:3],"상위 3개 피드백":fed_list[:3]}
 
 @router.get("/mentor_return_three", summary= "멘토 기준 상위 3개의 전체 과제/과제 피드백 반환")
@@ -324,7 +321,6 @@ def mentee_return_three(class_id : str,
             "feedback_status" : feedback_status
         })
         
-    logger.info("[assignment][mentor_return_three][GET][success] user_id=%s, params=%s, status=성공, message=멘토 상위 3개 과제/피드백 반환", user, {"class_id": class_id})
     return {"상위 3개 과제": al_list[:3],"상위 3개 과제 및 피드백 상태": fed_list[:3]}
 
 @router.get("/mysubmission",summary = "내가 제출한 과제 표시")
@@ -336,7 +332,6 @@ def mysubmission(class_id : str
     token = credentials.credentials
     user = token_decode(token)
     if classroom is None:
-        logger.warning("[assignment][mysubmission][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="존재하는 클래스룸이 없습니다.")
     
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id).all()
@@ -360,7 +355,6 @@ def mysubmission(class_id : str
                         , "status" : submission.correct,"code" : submission.code, "submitted_at" : submission.submitted_at
                         , "feedback" : feedback}
                 result.append(as_data)
-    logger.info("[assignment][mysubmission][GET][success] user_id=%s, params=%s, status=성공, message=내가 제출한 과제 반환", user, {"class_id": class_id})
     return result
 
 @router.get("/myfeedbacks",summary="받은 피드백 표시")
@@ -372,7 +366,6 @@ def myfeedbacks(class_id : str
     user = token_decode(token)
     classroom = cs_db.query(Classroom).filter(Classroom.class_code == class_id).first()
     if classroom == None :
-        logger.warning("[assignment][myfeedbacks][GET][fail] user_id=%s, params=%s, status=실패, message=존재하지 않는 클래스룸", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="클래스룸이 존재하지 않습니다.")
     assignments = as_db.query(Assignment).filter(Assignment.class_id == class_id)
     result = []
@@ -384,7 +377,6 @@ def myfeedbacks(class_id : str
         else:
             data = {"assignment_id" : assignment.assignment_id, "title" : assignment.title , "feedback" : feedback.feedback}
             result.append(data)
-    logger.info("[assignment][myfeedbacks][GET][success] user_id=%s, params=%s, status=성공, message=받은 피드백 반환", user, {"class_id": class_id})
     if result == []:
         return "받은 피드백이 없습니다."
     else :
@@ -400,7 +392,6 @@ def mentor_status(assignment_id : str
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
-        logger.warning("[assignment][status/maker][GET][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         check_created(user,assignment.class_id,cs_db)
@@ -447,7 +438,6 @@ def mentor_status(assignment_id : str
             else:
                 feedback_list.append({"user_id" : member, "feedback" : mem_feedback.feedback})
 
-        logger.info("[assignment][status/maker][GET][success] user_id=%s, params=%s, status=성공, message=멘토 개별 과제 status 반환", user, {"assignment_id": assignment_id})
         return {"assignment_status" : assignment_status
                 ,"feedback_status" : feedback_status
                 ,"feedbacks" : feedback_list
@@ -465,17 +455,14 @@ def mentee_status(assignment_id : str
     user = token_decode(token)
     assignment = as_db.query(Assignment).filter(Assignment.assignment_id == assignment_id).first()
     if assignment == None :
-        logger.warning("[assignment][status/mentee][GET][fail] user_id=%s, params=%s, status=실패, message=과제가 존재하지 않습니다.", user, {"assignment_id": assignment_id})
         return HTTPException(status_code=404, detail="과제가 존재하지 않습니다.")
     else :
         submission = as_db.query(AssignmentSubmission).filter(AssignmentSubmission.assignment_id == assignment_id
                                                               ,AssignmentSubmission.user_id == user).first()
         if submission == None :
-            logger.warning("[assignment][status/mentee][GET][fail] user_id=%s, params=%s, status=실패, message=제출 이력이 없습니다.", user, {"assignment_id": assignment_id})
             return HTTPException(status_code=404, detail="제출 이력이 없습니다.")
         feedback = as_db.query(AssignmentFeedBack).filter(AssignmentFeedBack.assignment_id == assignment_id,
                                                           AssignmentFeedBack.user_id == user).first()
-        logger.info("[assignment][status/mentee][GET][success] user_id=%s, params=%s, status=성공, message=멘티 개별 과제 status 반환", user, {"assignment_id": assignment_id})
         return {"assignment_id" : assignment_id, "user_id" : user
                 , "status" : submission.correct,"code" : submission.code, "submitted_at" : submission.submitted_at
                 , "feedback" : feedback}
