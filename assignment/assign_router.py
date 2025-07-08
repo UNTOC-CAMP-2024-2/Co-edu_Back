@@ -748,5 +748,4 @@ def mentee_status_by_category(category_id: int,
                 "feedback": bool(feedback)
             }
         result.append(as_data)
-    logger.info("[assignment][status/mentee/category][GET][success] user_id=%s, params=%s, status=성공, message=카테고리별 과제 정보 반환", user, {"category_id": category_id})
     return result
