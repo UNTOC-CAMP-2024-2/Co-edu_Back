@@ -125,10 +125,10 @@ def calculate_category_completion_rates(category_id: int, user_id: str, class_id
             total_possible_submissions = total_assignments * total_students
             
             for assignment in assignments:
-                completed_submissions = as_db.query(AssignmentSubmission).filter(
+                completed_submissions = as_db.query(AssignmentSubmission.user_id).filter(
                     AssignmentSubmission.assignment_id == assignment.assignment_id,
                     AssignmentSubmission.correct == True
-                ).count()
+                ).distinct().count()
                 total_completed_submissions += completed_submissions
             
             total_completion_rate = (total_completed_submissions / total_possible_submissions * 100) if total_possible_submissions > 0 else 0.0
