@@ -40,3 +40,15 @@ class Category(BaseModel):
     class_id: str
     name: str
     description: str | None = None
+
+class CompletionStats(BaseModel):
+    personal_completion_rate: float
+    total_completion_rate: float
+    total_assignments: int
+    completed_assignments: int
+
+class CategoryWithStats(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    completion_stats: CompletionStats

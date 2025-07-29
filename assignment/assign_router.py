@@ -698,9 +698,12 @@ def get_categories(class_id: str,
     if not classroom:
         logger.warning("[assignment][categories][GET][fail] user_id=%s, params=%s, status=실패, message=클래스룸이 존재하지 않습니다.", user, {"class_id": class_id})
         raise HTTPException(status_code=404, detail="해당 클래스룸이 존재하지 않습니다.")
-    categories = as_db.query(AssignmentCategory).filter(AssignmentCategory.class_id == class_id).all()
-    logger.info("[assignment][categories][GET][success] user_id=%s, params=%s, status=성공, message=카테고리 목록 반환", user, {"class_id": class_id})
-    return [{"id": c.id, "name": c.name, "description": c.description} for c in categories]
+    
+    # 수행률 정보를 포함한 카테고리 목록 반환
+    categories_with_stats = get_categories_with_completion_rates(class_id, user, as_db, cs_db)
+    
+    logger.info("[assignment][categories][GET][success] user_id=%s, params=%s, status=성공, message=카테고리 목록 및 수행률 반환", user, {"class_id": class_id})
+    return categories_with_stats
 
 @router.get("/status/mentee/category/{category_id}", summary="멘티 기준 카테고리별 과제 정보 반환")
 def mentee_status_by_category(category_id: int,
